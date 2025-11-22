@@ -30,6 +30,14 @@ public class GatewayController {
 
     @Value("${services.inventory.url}")
     private String inventoryServiceUrl;
+    
+    // Sanitize user input for logging to prevent log injection
+    private String sanitizeForLog(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
+    }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
@@ -47,7 +55,7 @@ public class GatewayController {
             span = tracer.spanBuilder("create-order-flow").startSpan();
         }
         try {
-            logger.info("Creating order through gateway: {}", orderRequest);
+            logger.info("Creating order through gateway");
             
             // Check inventory first
             String itemId = (String) orderRequest.get("itemId");
@@ -61,7 +69,7 @@ public class GatewayController {
             );
             
             if (!inventoryCheck.getStatusCode().is2xxSuccessful()) {
-                logger.warn("Inventory check failed for item: {}", itemId);
+                logger.warn("Inventory check failed for item: {}", sanitizeForLog(itemId));
                 return ResponseEntity.badRequest().body(Map.of("error", "Inventory check failed"));
             }
             
@@ -113,7 +121,7 @@ public class GatewayController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid order ID"));
         }
         
-        logger.info("Fetching order: {}", id);
+        logger.info("Fetching order: {}", sanitizeForLog(id));
         try {
             ResponseEntity<Map> response = restTemplate.getForEntity(
                 orderServiceUrl + "/api/orders/" + id,
@@ -121,7 +129,7 @@ public class GatewayController {
             );
             return response;
         } catch (Exception e) {
-            logger.error("Error fetching order: {}", id, e);
+            logger.error("Error fetching order: {}", sanitizeForLog(id), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
@@ -133,7 +141,7 @@ public class GatewayController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid item ID"));
         }
         
-        logger.info("Checking inventory for item: {}", itemId);
+        logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
         try {
             ResponseEntity<Map> response = restTemplate.getForEntity(
                 inventoryServiceUrl + "/api/inventory/" + itemId,
@@ -141,7 +149,7 @@ public class GatewayController {
             );
             return response;
         } catch (Exception e) {
-            logger.error("Error checking inventory: {}", itemId, e);
+            logger.error("Error checking inventory: {}", sanitizeForLog(itemId), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }

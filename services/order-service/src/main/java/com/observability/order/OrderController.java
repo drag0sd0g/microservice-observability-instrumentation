@@ -34,6 +34,14 @@ public class OrderController {
             .description("Total number of orders created")
             .register(meterRegistry);
     }
+    
+    // Sanitize user input for logging to prevent log injection
+    private String sanitizeForLog(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
+    }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
@@ -55,7 +63,7 @@ public class OrderController {
             Integer quantity = (Integer) orderRequest.get("quantity");
 
             if (itemId == null || quantity == null) {
-                logger.warn("Invalid order request: {}", orderRequest);
+                logger.warn("Invalid order request received");
                 return ResponseEntity.badRequest().body(Map.of("error", "itemId and quantity are required"));
             }
             
@@ -74,7 +82,7 @@ public class OrderController {
             order = orderRepository.save(order);
 
             ordersCreatedCounter.increment();
-            logger.info("Order created: {}", order.getId());
+            logger.info("Order created: {}", sanitizeForLog(order.getId()));
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", order.getId());
@@ -111,7 +119,7 @@ public class OrderController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid order ID"));
         }
         
-        logger.info("Fetching order: {}", id);
+        logger.info("Fetching order: {}", sanitizeForLog(id));
         return orderRepository.findById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());

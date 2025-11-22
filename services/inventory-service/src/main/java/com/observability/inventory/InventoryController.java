@@ -40,6 +40,14 @@ public class InventoryController {
 
     @Value("${chaos.error.rate:0.1}")
     private double chaosErrorRate;
+    
+    // Sanitize user input for logging to prevent log injection
+    private String sanitizeForLog(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
+    }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
@@ -78,14 +86,14 @@ public class InventoryController {
 
             // Chaos engineering: random errors
             if (chaosErrorEnabled && random.nextDouble() < chaosErrorRate) {
-                logger.error("Chaos error injected for item: {}", itemId);
+                logger.error("Chaos error injected for item: {}", sanitizeForLog(itemId));
                 if (span != null) {
                     span.setAttribute("chaos.error", true);
                 }
                 return ResponseEntity.internalServerError().body(Map.of("error", "Chaos error injected"));
             }
 
-            logger.info("Checking inventory for item: {}", itemId);
+            logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
             
             InventoryItem item = inventoryRepository.findById(itemId).orElse(null);
             
@@ -128,7 +136,7 @@ public class InventoryController {
 
     @PostMapping("/chaos/latency")
     public ResponseEntity<Map<String, Object>> configureChaosLatency(@RequestBody Map<String, Object> config) {
-        logger.info("Configuring chaos latency: {}", config);
+        logger.info("Configuring chaos latency");
         
         try {
             if (config.containsKey("enabled")) {
@@ -166,7 +174,7 @@ public class InventoryController {
 
     @PostMapping("/chaos/errors")
     public ResponseEntity<Map<String, Object>> configureChaosErrors(@RequestBody Map<String, Object> config) {
-        logger.info("Configuring chaos errors: {}", config);
+        logger.info("Configuring chaos errors");
         
         try {
             if (config.containsKey("enabled")) {
