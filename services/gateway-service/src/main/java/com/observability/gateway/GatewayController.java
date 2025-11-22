@@ -22,7 +22,7 @@ public class GatewayController {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Autowired
+    @Autowired(required = false)
     private Tracer tracer;
 
     @Value("${services.order.url}")
@@ -42,13 +42,18 @@ public class GatewayController {
 
     @PostMapping("/orders")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> orderRequest) {
-        Span span = tracer.spanBuilder("create-order-flow").startSpan();
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("create-order-flow").startSpan();
+        }
         try {
             logger.info("Creating order through gateway: {}", orderRequest);
             
             // Check inventory first
             String itemId = (String) orderRequest.get("itemId");
-            span.setAttribute("item.id", itemId);
+            if (span != null) {
+                span.setAttribute("item.id", itemId);
+            }
             
             ResponseEntity<Map> inventoryCheck = restTemplate.getForEntity(
                 inventoryServiceUrl + "/api/inventory/" + itemId, 
@@ -68,15 +73,21 @@ public class GatewayController {
             );
             
             logger.info("Order created successfully");
-            span.setAttribute("order.status", "success");
+            if (span != null) {
+                span.setAttribute("order.status", "success");
+            }
             return orderResponse;
         } catch (Exception e) {
             logger.error("Error creating order", e);
-            span.setAttribute("order.status", "error");
-            span.recordException(e);
+            if (span != null) {
+                span.setAttribute("order.status", "error");
+                span.recordException(e);
+            }
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         } finally {
-            span.end();
+            if (span != null) {
+                span.end();
+            }
         }
     }
 

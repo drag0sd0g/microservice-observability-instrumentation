@@ -8,7 +8,7 @@ group = 'com.observability'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = '17'
 }
 
 repositories {
@@ -27,7 +27,7 @@ dependencies {
     implementation 'io.opentelemetry:opentelemetry-api:1.32.0'
     implementation 'io.opentelemetry:opentelemetry-sdk:1.32.0'
     implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.32.0'
-    implementation 'io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.0.0'
+    implementation 'io.opentelemetry.semconv:opentelemetry-semconv:1.21.0-alpha'
     
     // JSON logging
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
@@ -36,6 +36,7 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.h2database:h2'
 }
 
 tasks.named('test') {

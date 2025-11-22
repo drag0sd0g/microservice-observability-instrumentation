@@ -24,7 +24,7 @@ public class OrderController {
     @Autowired
     private OrderRepository orderRepository;
 
-    @Autowired
+    @Autowired(required = false)
     private Tracer tracer;
 
     private final Counter ordersCreatedCounter;
@@ -46,7 +46,10 @@ public class OrderController {
 
     @PostMapping("/orders")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> orderRequest) {
-        Span span = tracer.spanBuilder("create-order").startSpan();
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("create-order").startSpan();
+        }
         try {
             String itemId = (String) orderRequest.get("itemId");
             Integer quantity = (Integer) orderRequest.get("quantity");
@@ -56,8 +59,10 @@ public class OrderController {
                 return ResponseEntity.badRequest().body(Map.of("error", "itemId and quantity are required"));
             }
 
-            span.setAttribute("order.item_id", itemId);
-            span.setAttribute("order.quantity", quantity);
+            if (span != null) {
+                span.setAttribute("order.item_id", itemId);
+                span.setAttribute("order.quantity", quantity);
+            }
 
             Order order = new Order(itemId, quantity);
             order = orderRepository.save(order);
@@ -75,10 +80,14 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             logger.error("Error creating order", e);
-            span.recordException(e);
+            if (span != null) {
+                span.recordException(e);
+            }
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         } finally {
-            span.end();
+            if (span != null) {
+                span.end();
+            }
         }
     }
 

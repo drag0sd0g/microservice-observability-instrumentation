@@ -23,7 +23,7 @@ public class InventoryController {
     @Autowired
     private InventoryRepository inventoryRepository;
 
-    @Autowired
+    @Autowired(required = false)
     private Tracer tracer;
 
     @Value("${chaos.latency.enabled:false}")
@@ -52,14 +52,21 @@ public class InventoryController {
 
     @GetMapping("/inventory/{itemId}")
     public ResponseEntity<?> checkInventory(@PathVariable String itemId) {
-        Span span = tracer.spanBuilder("check-inventory").startSpan();
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("check-inventory").startSpan();
+        }
         try {
-            span.setAttribute("inventory.item_id", itemId);
+            if (span != null) {
+                span.setAttribute("inventory.item_id", itemId);
+            }
             
             // Chaos engineering: random latency
             if (chaosLatencyEnabled) {
                 int delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
-                span.setAttribute("chaos.latency_ms", delay);
+                if (span != null) {
+                    span.setAttribute("chaos.latency_ms", delay);
+                }
                 logger.warn("Chaos latency injected: {}ms", delay);
                 Thread.sleep(delay);
             }
@@ -67,7 +74,9 @@ public class InventoryController {
             // Chaos engineering: random errors
             if (chaosErrorEnabled && random.nextDouble() < chaosErrorRate) {
                 logger.error("Chaos error injected for item: {}", itemId);
-                span.setAttribute("chaos.error", true);
+                if (span != null) {
+                    span.setAttribute("chaos.error", true);
+                }
                 return ResponseEntity.internalServerError().body(Map.of("error", "Chaos error injected"));
             }
 
@@ -94,15 +103,21 @@ public class InventoryController {
             return ResponseEntity.ok(response);
         } catch (InterruptedException e) {
             logger.error("Interrupted during latency simulation", e);
-            span.recordException(e);
+            if (span != null) {
+                span.recordException(e);
+            }
             Thread.currentThread().interrupt();
             return ResponseEntity.internalServerError().body(Map.of("error", "Service interrupted"));
         } catch (Exception e) {
             logger.error("Error checking inventory", e);
-            span.recordException(e);
+            if (span != null) {
+                span.recordException(e);
+            }
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         } finally {
-            span.end();
+            if (span != null) {
+                span.end();
+            }
         }
     }
 
