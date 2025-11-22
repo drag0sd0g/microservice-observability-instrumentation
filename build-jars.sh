@@ -7,7 +7,19 @@ set -e
 echo "🔨 Building all microservices..."
 echo "================================"
 
-export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64 2>/dev/null || export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+# Try to find Java 21, fallback to system Java
+if [ -d "/usr/lib/jvm/temurin-21-jdk-amd64" ]; then
+    export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
+elif [ -d "/usr/lib/jvm/java-21-openjdk-amd64" ]; then
+    export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+elif [ -d "/usr/lib/jvm/java-21" ]; then
+    export JAVA_HOME=/usr/lib/jvm/java-21
+else
+    # Use system default Java
+    export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+fi
+
+export PATH=$JAVA_HOME/bin:$PATH
 
 echo "Using Java: $(java -version 2>&1 | head -1)"
 echo ""
