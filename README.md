@@ -154,7 +154,10 @@ cd microservice-observability-instrumentation
 ### 2. Build the services
 
 ```bash
-# Build all services
+# Quick build (recommended)
+./build-jars.sh
+
+# Or build manually
 cd services/gateway-service && ./gradlew build && cd ../..
 cd services/order-service && ./gradlew build && cd ../..
 cd services/inventory-service && ./gradlew build && cd ../..
