@@ -58,6 +58,12 @@ public class OrderController {
                 logger.warn("Invalid order request: {}", orderRequest);
                 return ResponseEntity.badRequest().body(Map.of("error", "itemId and quantity are required"));
             }
+            
+            // Validate quantity
+            if (quantity <= 0 || quantity > 10000) {
+                logger.warn("Invalid quantity: {}", quantity);
+                return ResponseEntity.badRequest().body(Map.of("error", "Quantity must be between 1 and 10000"));
+            }
 
             if (span != null) {
                 span.setAttribute("order.item_id", itemId);
@@ -83,7 +89,7 @@ public class OrderController {
             if (span != null) {
                 span.recordException(e);
             }
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         } finally {
             if (span != null) {
                 span.end();
@@ -100,6 +106,11 @@ public class OrderController {
 
     @GetMapping("/orders/{id}")
     public ResponseEntity<?> getOrder(@PathVariable String id) {
+        // Validate input to prevent injection attacks
+        if (id == null || id.trim().isEmpty() || id.length() > 255) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid order ID"));
+        }
+        
         logger.info("Fetching order: {}", id);
         return orderRepository.findById(id)
             .map(ResponseEntity::ok)

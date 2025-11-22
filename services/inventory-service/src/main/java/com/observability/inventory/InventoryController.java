@@ -9,16 +9,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 @RestController
 @RequestMapping("/api")
 public class InventoryController {
 
     private static final Logger logger = LoggerFactory.getLogger(InventoryController.class);
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
 
     @Autowired
     private InventoryRepository inventoryRepository;
@@ -52,6 +52,11 @@ public class InventoryController {
 
     @GetMapping("/inventory/{itemId}")
     public ResponseEntity<?> checkInventory(@PathVariable String itemId) {
+        // Validate input to prevent injection attacks
+        if (itemId == null || itemId.trim().isEmpty() || itemId.length() > 255) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid item ID"));
+        }
+        
         Span span = null;
         if (tracer != null) {
             span = tracer.spanBuilder("check-inventory").startSpan();
@@ -113,7 +118,7 @@ public class InventoryController {
             if (span != null) {
                 span.recordException(e);
             }
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         } finally {
             if (span != null) {
                 span.end();
@@ -125,37 +130,63 @@ public class InventoryController {
     public ResponseEntity<Map<String, Object>> configureChaosLatency(@RequestBody Map<String, Object> config) {
         logger.info("Configuring chaos latency: {}", config);
         
-        if (config.containsKey("enabled")) {
-            this.chaosLatencyEnabled = (Boolean) config.get("enabled");
-        }
-        if (config.containsKey("min")) {
-            this.chaosLatencyMin = (Integer) config.get("min");
-        }
-        if (config.containsKey("max")) {
-            this.chaosLatencyMax = (Integer) config.get("max");
-        }
+        try {
+            if (config.containsKey("enabled")) {
+                this.chaosLatencyEnabled = (Boolean) config.get("enabled");
+            }
+            if (config.containsKey("min")) {
+                int min = ((Number) config.get("min")).intValue();
+                if (min < 0 || min > 10000) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Min latency must be between 0 and 10000"));
+                }
+                this.chaosLatencyMin = min;
+            }
+            if (config.containsKey("max")) {
+                int max = ((Number) config.get("max")).intValue();
+                if (max < 0 || max > 10000) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Max latency must be between 0 and 10000"));
+                }
+                this.chaosLatencyMax = max;
+            }
+            
+            if (chaosLatencyMin > chaosLatencyMax) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Min latency cannot be greater than max latency"));
+            }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("enabled", chaosLatencyEnabled);
-        response.put("min", chaosLatencyMin);
-        response.put("max", chaosLatencyMax);
-        return ResponseEntity.ok(response);
+            Map<String, Object> response = new HashMap<>();
+            response.put("enabled", chaosLatencyEnabled);
+            response.put("min", chaosLatencyMin);
+            response.put("max", chaosLatencyMax);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error configuring chaos latency", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid configuration"));
+        }
     }
 
     @PostMapping("/chaos/errors")
     public ResponseEntity<Map<String, Object>> configureChaosErrors(@RequestBody Map<String, Object> config) {
         logger.info("Configuring chaos errors: {}", config);
         
-        if (config.containsKey("enabled")) {
-            this.chaosErrorEnabled = (Boolean) config.get("enabled");
-        }
-        if (config.containsKey("rate")) {
-            this.chaosErrorRate = ((Number) config.get("rate")).doubleValue();
-        }
+        try {
+            if (config.containsKey("enabled")) {
+                this.chaosErrorEnabled = (Boolean) config.get("enabled");
+            }
+            if (config.containsKey("rate")) {
+                double rate = ((Number) config.get("rate")).doubleValue();
+                if (rate < 0.0 || rate > 1.0) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Error rate must be between 0.0 and 1.0"));
+                }
+                this.chaosErrorRate = rate;
+            }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("enabled", chaosErrorEnabled);
-        response.put("rate", chaosErrorRate);
-        return ResponseEntity.ok(response);
+            Map<String, Object> response = new HashMap<>();
+            response.put("enabled", chaosErrorEnabled);
+            response.put("rate", chaosErrorRate);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error configuring chaos errors", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid configuration"));
+        }
     }
 }

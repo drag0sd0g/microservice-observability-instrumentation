@@ -83,7 +83,7 @@ public class GatewayController {
                 span.setAttribute("order.status", "error");
                 span.recordException(e);
             }
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         } finally {
             if (span != null) {
                 span.end();
@@ -102,12 +102,17 @@ public class GatewayController {
             return response;
         } catch (Exception e) {
             logger.error("Error fetching orders", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
 
     @GetMapping("/orders/{id}")
     public ResponseEntity<?> getOrder(@PathVariable String id) {
+        // Validate input to prevent injection attacks
+        if (id == null || id.trim().isEmpty() || id.length() > 255) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid order ID"));
+        }
+        
         logger.info("Fetching order: {}", id);
         try {
             ResponseEntity<Map> response = restTemplate.getForEntity(
@@ -117,12 +122,17 @@ public class GatewayController {
             return response;
         } catch (Exception e) {
             logger.error("Error fetching order: {}", id, e);
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
 
     @GetMapping("/inventory/{itemId}")
     public ResponseEntity<?> checkInventory(@PathVariable String itemId) {
+        // Validate input to prevent injection attacks
+        if (itemId == null || itemId.trim().isEmpty() || itemId.length() > 255) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid item ID"));
+        }
+        
         logger.info("Checking inventory for item: {}", itemId);
         try {
             ResponseEntity<Map> response = restTemplate.getForEntity(
@@ -132,7 +142,7 @@ public class GatewayController {
             return response;
         } catch (Exception e) {
             logger.error("Error checking inventory: {}", itemId, e);
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
 }
