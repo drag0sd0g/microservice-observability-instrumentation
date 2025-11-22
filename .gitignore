@@ -3,7 +3,6 @@
 **/build/
 !src/**/build/
 gradle-app.setting
-!gradle-wrapper.jar
 .gradletasknamecache
 
 # Eclipse
@@ -44,7 +43,8 @@ nbdist/
 *.swp
 *~
 
-# Spring Boot
+# Spring Boot JAR files (but keep gradle-wrapper.jar)
 *.jar
+!gradle-wrapper.jar
 *.war
 *.ear
