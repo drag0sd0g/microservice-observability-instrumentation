@@ -1,0 +1,100 @@
+name: Release and Tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/**'
+      - 'observability/**'
+      - 'docker-compose.yml'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Get current date
+      id: date
+      run: echo "date=$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+      
+    - name: Get commit count
+      id: count
+      run: |
+        COUNT=$(git rev-list --count HEAD)
+        echo "count=$COUNT" >> $GITHUB_OUTPUT
+        
+    - name: Create version tag
+      id: version
+      run: |
+        VERSION="v${{ steps.date.outputs.date }}-${{ steps.count.outputs.count }}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+        if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create Git tag
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag -a ${{ steps.version.outputs.version }} -m "Release ${{ steps.version.outputs.version }}"
+        git push origin ${{ steps.version.outputs.version }}
+        
+    - name: Generate changelog
+      id: changelog
+      if: steps.check_tag.outputs.exists == 'false'
+      run: |
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$PREVIOUS_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+        else
+          CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        fi
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create GitHub Release
+      if: steps.check_tag.outputs.exists == 'false'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        release_name: Release ${{ steps.version.outputs.version }}
+        body: |
+          ## What's Changed
+          
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Services
+          - Gateway Service
+          - Order Service  
+          - Inventory Service
+          
+          ## Observability Stack
+          - Prometheus
+          - Loki
+          - Tempo
+          - Grafana Alloy
+          - Grafana
+          - Alertmanager
+        draft: false
+        prerelease: false

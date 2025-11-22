@@ -1,5 +1,11 @@
 # Microservices Observability with Grafana Stack
 
+[![CI Build and Test](https://github.com/drag0sd0g/microservice-observability-instrumentation/actions/workflows/ci.yml/badge.svg)](https://github.com/drag0sd0g/microservice-observability-instrumentation/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/drag0sd0g/microservice-observability-instrumentation/actions/workflows/codeql.yml/badge.svg)](https://github.com/drag0sd0g/microservice-observability-instrumentation/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/github/license/drag0sd0g/microservice-observability-instrumentation)](LICENSE)
+[![Java Version](https://img.shields.io/badge/Java-21-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
+[![Gradle Version](https://img.shields.io/badge/Gradle-8.11.1-blue.svg)](https://gradle.org/)
+
 A comprehensive demonstration of modern observability practices using the Grafana stack (Prometheus, Loki, Tempo, Alloy, Grafana) with OpenTelemetry instrumentation in a distributed microservices architecture.
 
 ## 🎯 Project Overview
@@ -120,9 +126,9 @@ This project showcases a complete observability solution featuring:
 
 ## 🔧 Tech Stack
 
-- **Language**: Java 17
+- **Language**: Java 21
 - **Framework**: Spring Boot 3.2.0
-- **Build Tool**: Gradle
+- **Build Tool**: Gradle 8.11.1
 - **Database**: CockroachDB (PostgreSQL-compatible)
 - **Instrumentation**: OpenTelemetry SDK
 - **Logging**: Logback with Logstash JSON encoder
