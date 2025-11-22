@@ -1,0 +1,102 @@
+// Grafana Alloy Configuration for OpenTelemetry Collection
+
+// OTLP Receiver for traces, metrics, and logs
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+  }
+}
+
+// Batch processor for better performance
+otelcol.processor.batch "default" {
+  output {
+    metrics = [otelcol.processor.attributes.default.input]
+    logs    = [otelcol.processor.attributes.default.input]
+    traces  = [otelcol.processor.attributes.default.input]
+  }
+}
+
+// Attributes processor to enrich telemetry data
+otelcol.processor.attributes "default" {
+  action {
+    key = "environment"
+    value = "demo"
+    action = "upsert"
+  }
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+    logs    = [otelcol.exporter.loki.default.input]
+    traces  = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+// Export traces to Tempo
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Export logs to Loki
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// Export metrics to Prometheus (via remote write)
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// Scrape Prometheus metrics from services
+prometheus.scrape "gateway_service" {
+  targets = [
+    {"__address__" = "gateway-service:8080", "job" = "gateway-service"},
+  ]
+  forward_to = [prometheus.remote_write.default.receiver]
+  metrics_path = "/actuator/prometheus"
+  scrape_interval = "15s"
+}
+
+prometheus.scrape "order_service" {
+  targets = [
+    {"__address__" = "order-service:8081", "job" = "order-service"},
+  ]
+  forward_to = [prometheus.remote_write.default.receiver]
+  metrics_path = "/actuator/prometheus"
+  scrape_interval = "15s"
+}
+
+prometheus.scrape "inventory_service" {
+  targets = [
+    {"__address__" = "inventory-service:8082", "job" = "inventory-service"},
+  ]
+  forward_to = [prometheus.remote_write.default.receiver]
+  metrics_path = "/actuator/prometheus"
+  scrape_interval = "15s"
+}
