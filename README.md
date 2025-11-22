@@ -120,7 +120,7 @@ This project showcases a complete observability solution featuring:
 
 ## 🔧 Tech Stack
 
-- **Language**: Java 21
+- **Language**: Java 17
 - **Framework**: Spring Boot 3.2.0
 - **Build Tool**: Gradle
 - **Database**: CockroachDB (PostgreSQL-compatible)
