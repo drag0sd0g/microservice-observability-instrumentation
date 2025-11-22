@@ -1,0 +1,58 @@
+name: CodeQL Security Analysis
+
+on:
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Mondays
+
+jobs:
+  analyze:
+    name: Analyze with CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-and-quality
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Build all services
+      run: |
+        cd services/gateway-service && ./gradlew build --no-daemon -x test
+        cd ../order-service && ./gradlew build --no-daemon -x test
+        cd ../inventory-service && ./gradlew build --no-daemon -x test
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"

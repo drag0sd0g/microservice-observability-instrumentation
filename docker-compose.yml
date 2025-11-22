@@ -1,0 +1,198 @@
+version: '3.8'
+
+services:
+  # Database
+  cockroachdb:
+    image: cockroachdb/cockroach:v23.2.0
+    container_name: cockroachdb
+    command: start-single-node --insecure --store=attrs=ssd,path=/var/lib/cockroach/
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    networks:
+      - observability-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health?ready=1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Microservices
+  gateway-service:
+    build:
+      context: ./services/gateway-service
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
+      - SERVICES_ORDER_URL=http://order-service:8081
+      - SERVICES_INVENTORY_URL=http://inventory-service:8082
+    depends_on:
+      - alloy
+    networks:
+      - observability-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://cockroachdb:26257/orders?sslmode=disable
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      alloy:
+        condition: service_started
+    networks:
+      - observability-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://cockroachdb:26257/inventory?sslmode=disable
+      - CHAOS_LATENCY_ENABLED=false
+      - CHAOS_ERROR_ENABLED=false
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      alloy:
+        condition: service_started
+    networks:
+      - observability-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Observability Stack
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./observability/loki/config.yml:/etc/loki/config.yml
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo/tempo.yml" ]
+    ports:
+      - "3200:3200"   # Tempo
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    volumes:
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:v1.0.0
+    container_name: alloy
+    command:
+      - run
+      - /etc/alloy/alloy-config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+    ports:
+      - "12345:12345"  # Alloy UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+    volumes:
+      - ./observability/alloy/alloy-config.alloy:/etc/alloy/alloy-config.alloy
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./observability/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./observability/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./observability/alertmanager/config.yml:/etc/alertmanager/config.yml
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+networks:
+  observability-net:
+    driver: bridge

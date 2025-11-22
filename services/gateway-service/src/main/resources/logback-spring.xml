@@ -1,0 +1,18 @@
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>true</includeContext>
+            <includeMdc>true</includeMdc>
+            <customFields>{"service.name":"gateway-service"}</customFields>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
