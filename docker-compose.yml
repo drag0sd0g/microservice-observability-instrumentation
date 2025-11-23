@@ -15,20 +15,20 @@ services:
       timeout: 5s
       retries: 5
 
-  # Database Initialization
-  cockroachdb-init:
-    image: cockroachdb/cockroach:v23.2.0
-    container_name: cockroachdb-init
+  # Database Initialization with Liquibase
+  liquibase-init:
+    image: liquibase/liquibase:4.25-alpine
+    container_name: liquibase-init
     depends_on:
       cockroachdb:
         condition: service_healthy
     networks:
       - observability-net
     volumes:
-      - ./observability/cockroachdb/init.sh:/init.sh
-    entrypoint: ["/bin/bash", "/init.sh"]
-    environment:
-      - COCKROACH_HOST=cockroachdb
+      - ./observability/liquibase:/liquibase/changelog
+    command: 
+      - --defaults-file=/liquibase/changelog/liquibase.properties
+      - update
 
   # Microservices
   gateway-service:
@@ -73,7 +73,7 @@ services:
     depends_on:
       cockroachdb:
         condition: service_healthy
-      cockroachdb-init:
+      liquibase-init:
         condition: service_completed_successfully
       alloy:
         condition: service_started
@@ -102,7 +102,7 @@ services:
     depends_on:
       cockroachdb:
         condition: service_healthy
-      cockroachdb-init:
+      liquibase-init:
         condition: service_completed_successfully
       alloy:
         condition: service_started

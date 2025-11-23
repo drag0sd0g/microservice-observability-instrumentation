@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-orders-database
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: SELECT COUNT(*) FROM pg_database WHERE datname = 'orders'
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: CREATE DATABASE orders
+      rollback:
+        - sql:
+            sql: DROP DATABASE IF EXISTS orders
+  - changeSet:
+      id: create-inventory-database
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: SELECT COUNT(*) FROM pg_database WHERE datname = 'inventory'
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: CREATE DATABASE inventory
+      rollback:
+        - sql:
+            sql: DROP DATABASE IF EXISTS inventory

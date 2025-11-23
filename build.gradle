@@ -55,6 +55,7 @@ project(':gateway-service') {
 project(':order-service') {
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.liquibase:liquibase-core'
         implementation 'org.postgresql:postgresql:42.7.1'
         testImplementation 'com.h2database:h2'
         testImplementation 'org.testcontainers:testcontainers:1.19.3'
@@ -66,6 +67,7 @@ project(':order-service') {
 project(':inventory-service') {
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.liquibase:liquibase-core'
         implementation 'org.postgresql:postgresql:42.7.1'
         testImplementation 'com.h2database:h2'
         testImplementation 'org.testcontainers:testcontainers:1.19.3'
