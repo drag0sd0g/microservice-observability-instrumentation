@@ -15,6 +15,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # Database Initialization
+  cockroachdb-init:
+    image: cockroachdb/cockroach:v23.2.0
+    container_name: cockroachdb-init
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+    networks:
+      - observability-net
+    volumes:
+      - ./observability/cockroachdb/init.sh:/init.sh
+    entrypoint: ["/bin/bash", "/init.sh"]
+    environment:
+      - COCKROACH_HOST=cockroachdb
+
   # Microservices
   gateway-service:
     build:
@@ -52,6 +67,8 @@ services:
     depends_on:
       cockroachdb:
         condition: service_healthy
+      cockroachdb-init:
+        condition: service_completed_successfully
       alloy:
         condition: service_started
     networks:
@@ -61,6 +78,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: on-failure
 
   inventory-service:
     build:
@@ -78,6 +96,8 @@ services:
     depends_on:
       cockroachdb:
         condition: service_healthy
+      cockroachdb-init:
+        condition: service_completed_successfully
       alloy:
         condition: service_started
     networks:
@@ -87,6 +107,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: on-failure
 
   # Observability Stack
   prometheus:
