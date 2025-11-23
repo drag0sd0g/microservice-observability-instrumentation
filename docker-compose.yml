@@ -44,7 +44,12 @@ services:
       - SERVICES_ORDER_URL=http://order-service:8081
       - SERVICES_INVENTORY_URL=http://inventory-service:8082
     depends_on:
-      - alloy
+      order-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      alloy:
+        condition: service_started
     networks:
       - observability-net
     healthcheck:
@@ -52,6 +57,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: on-failure
 
   order-service:
     build:
