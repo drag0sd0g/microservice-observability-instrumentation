@@ -140,7 +140,7 @@ This project showcases a complete observability solution featuring:
 - Docker 20.10+
 - Docker Compose 2.0+
 - 8GB RAM minimum (recommended: 16GB)
-- Available ports: 3000, 3100, 3200, 4317, 4318, 8080, 8081, 8082, 9090, 9093, 12345, 26257
+- Available ports: 3000, 3100, 3200, 4317, 4318, 8080, 8081, 8082, 8090, 9090, 9093, 12345, 26257
 
 ## 🚀 Quick Start
 
@@ -154,13 +154,8 @@ cd microservice-observability-instrumentation
 ### 2. Build the services
 
 ```bash
-# Quick build (recommended)
-./build-jars.sh
-
-# Or build manually
-cd services/gateway-service && ./gradlew build && cd ../..
-cd services/order-service && ./gradlew build && cd ../..
-cd services/inventory-service && ./gradlew build && cd ../..
+# Build all services from the root
+./gradlew clean build
 ```
 
 ### 3. Start the stack
@@ -181,7 +176,7 @@ docker-compose ps
 - **Prometheus**: http://localhost:9090
 - **Alloy**: http://localhost:12345
 - **Alertmanager**: http://localhost:9093
-- **CockroachDB UI**: http://localhost:8080
+- **CockroachDB UI**: http://localhost:8090
 - **Gateway Service**: http://localhost:8080/api/health
 
 ## 📝 Example API Calls
@@ -500,7 +495,7 @@ docker-compose restart
 ### Database connection issues
 ```bash
 # Check CockroachDB health
-curl http://localhost:8080/health?ready=1
+curl http://localhost:8090/health?ready=1
 
 # Access CockroachDB SQL shell
 docker exec -it cockroachdb ./cockroach sql --insecure

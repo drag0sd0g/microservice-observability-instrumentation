@@ -1,0 +1,94 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: system
+      changes:
+        - createTable:
+            tableName: inventory
+            columns:
+              - column:
+                  name: item_id
+                  type: VARCHAR(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_inventory_name
+            tableName: inventory
+            columns:
+              - column:
+                  name: name
+  - changeSet:
+      id: 2
+      author: system
+      changes:
+        - insert:
+            tableName: inventory
+            columns:
+              - column:
+                  name: item_id
+                  value: ITEM-1
+              - column:
+                  name: name
+                  value: Sample Item 1
+              - column:
+                  name: quantity
+                  value: 100
+        - insert:
+            tableName: inventory
+            columns:
+              - column:
+                  name: item_id
+                  value: ITEM-2
+              - column:
+                  name: name
+                  value: Sample Item 2
+              - column:
+                  name: quantity
+                  value: 150
+        - insert:
+            tableName: inventory
+            columns:
+              - column:
+                  name: item_id
+                  value: ITEM-3
+              - column:
+                  name: name
+                  value: Sample Item 3
+              - column:
+                  name: quantity
+                  value: 75
+        - insert:
+            tableName: inventory
+            columns:
+              - column:
+                  name: item_id
+                  value: ITEM-4
+              - column:
+                  name: name
+                  value: Sample Item 4
+              - column:
+                  name: quantity
+                  value: 200
+        - insert:
+            tableName: inventory
+            columns:
+              - column:
+                  name: item_id
+                  value: ITEM-5
+              - column:
+                  name: name
+                  value: Sample Item 5
+              - column:
+                  name: quantity
+                  value: 50

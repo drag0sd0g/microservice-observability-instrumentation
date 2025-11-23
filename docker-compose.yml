@@ -6,7 +6,7 @@ services:
     command: start-single-node --insecure --store=attrs=ssd,path=/var/lib/cockroach/
     ports:
       - "26257:26257"
-      - "8080:8080"
+      - "8090:8080"
     networks:
       - observability-net
     healthcheck:
@@ -14,6 +14,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Database Initialization with Liquibase
+  liquibase-init:
+    image: liquibase/liquibase:4.25-alpine
+    container_name: liquibase-init
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+    networks:
+      - observability-net
+    volumes:
+      - ./observability/liquibase:/liquibase/changelog
+    command: 
+      - --defaults-file=/liquibase/changelog/liquibase.properties
+      - update
 
   # Microservices
   gateway-service:
@@ -29,7 +44,12 @@ services:
       - SERVICES_ORDER_URL=http://order-service:8081
       - SERVICES_INVENTORY_URL=http://inventory-service:8082
     depends_on:
-      - alloy
+      order-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      alloy:
+        condition: service_started
     networks:
       - observability-net
     healthcheck:
@@ -37,6 +57,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: on-failure
 
   order-service:
     build:
@@ -52,6 +73,8 @@ services:
     depends_on:
       cockroachdb:
         condition: service_healthy
+      liquibase-init:
+        condition: service_completed_successfully
       alloy:
         condition: service_started
     networks:
@@ -61,6 +84,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: on-failure
 
   inventory-service:
     build:
@@ -78,6 +102,8 @@ services:
     depends_on:
       cockroachdb:
         condition: service_healthy
+      liquibase-init:
+        condition: service_completed_successfully
       alloy:
         condition: service_started
     networks:
@@ -87,6 +113,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: on-failure
 
   # Observability Stack
   prometheus:
@@ -126,8 +153,6 @@ services:
     command: [ "-config.file=/etc/tempo/tempo.yml" ]
     ports:
       - "3200:3200"   # Tempo
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
     volumes:
       - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml
     networks:
