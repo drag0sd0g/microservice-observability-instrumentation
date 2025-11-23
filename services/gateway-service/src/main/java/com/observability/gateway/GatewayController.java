@@ -8,7 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,8 +20,7 @@ public class GatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(GatewayController.class);
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final WebClient webClient;
 
     @Autowired(required = false)
     private Tracer tracer;
@@ -30,6 +30,10 @@ public class GatewayController {
 
     @Value("${services.inventory.url}")
     private String inventoryServiceUrl;
+
+    public GatewayController(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.build();
+    }
     
     // Sanitize user input for logging to prevent log injection
     private String sanitizeForLog(String input) {
@@ -63,28 +67,30 @@ public class GatewayController {
                 span.setAttribute("item.id", itemId);
             }
             
-            ResponseEntity<Map> inventoryCheck = restTemplate.getForEntity(
-                inventoryServiceUrl + "/api/inventory/" + itemId, 
-                Map.class
-            );
+            Map inventoryCheck = webClient.get()
+                .uri(inventoryServiceUrl + "/api/inventory/" + itemId)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
             
-            if (!inventoryCheck.getStatusCode().is2xxSuccessful()) {
+            if (inventoryCheck == null) {
                 logger.warn("Inventory check failed for item: {}", sanitizeForLog(itemId));
                 return ResponseEntity.badRequest().body(Map.of("error", "Inventory check failed"));
             }
             
             // Create order
-            ResponseEntity<Map> orderResponse = restTemplate.postForEntity(
-                orderServiceUrl + "/api/orders",
-                orderRequest,
-                Map.class
-            );
+            Map orderResponse = webClient.post()
+                .uri(orderServiceUrl + "/api/orders")
+                .bodyValue(orderRequest)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
             
             logger.info("Order created successfully");
             if (span != null) {
                 span.setAttribute("order.status", "success");
             }
-            return orderResponse;
+            return ResponseEntity.status(201).body(orderResponse);
         } catch (Exception e) {
             logger.error("Error creating order", e);
             if (span != null) {
@@ -103,11 +109,12 @@ public class GatewayController {
     public ResponseEntity<?> getOrders() {
         logger.info("Fetching all orders");
         try {
-            ResponseEntity<Object> response = restTemplate.getForEntity(
-                orderServiceUrl + "/api/orders",
-                Object.class
-            );
-            return response;
+            Object response = webClient.get()
+                .uri(orderServiceUrl + "/api/orders")
+                .retrieve()
+                .bodyToMono(Object.class)
+                .block();
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching orders", e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
@@ -123,11 +130,16 @@ public class GatewayController {
         
         logger.info("Fetching order: {}", sanitizeForLog(id));
         try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(
-                orderServiceUrl + "/api/orders/" + id,
-                Map.class
-            );
-            return response;
+            Map response = webClient.get()
+                .uri(orderServiceUrl + "/api/orders/" + id)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+            
+            if (response == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching order: {}", sanitizeForLog(id), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
@@ -143,11 +155,12 @@ public class GatewayController {
         
         logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
         try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(
-                inventoryServiceUrl + "/api/inventory/" + itemId,
-                Map.class
-            );
-            return response;
+            Map response = webClient.get()
+                .uri(inventoryServiceUrl + "/api/inventory/" + itemId)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error checking inventory: {}", sanitizeForLog(itemId), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));

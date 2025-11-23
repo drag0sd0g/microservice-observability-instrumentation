@@ -29,23 +29,8 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
           
-    - name: Build Gateway Service
-      working-directory: ./services/gateway-service
+    - name: Build all services
       run: ./gradlew build --no-daemon
-      
-    - name: Build Order Service
-      working-directory: ./services/order-service
-      run: ./gradlew build --no-daemon
-      
-    - name: Build Inventory Service
-      working-directory: ./services/inventory-service
-      run: ./gradlew build --no-daemon
-      
-    - name: Run Tests
-      run: |
-        cd services/gateway-service && ./gradlew test --no-daemon
-        cd ../order-service && ./gradlew test --no-daemon
-        cd ../inventory-service && ./gradlew test --no-daemon
         
     - name: Upload Test Reports
       if: always()
