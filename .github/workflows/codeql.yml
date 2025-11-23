@@ -47,10 +47,7 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Build all services
-      run: |
-        cd services/gateway-service && ./gradlew build --no-daemon -x test
-        cd ../order-service && ./gradlew build --no-daemon -x test
-        cd ../inventory-service && ./gradlew build --no-daemon -x test
+      run: ./gradlew build --no-daemon -x test
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
