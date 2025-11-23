@@ -1,0 +1,9 @@
+rootProject.name = 'microservice-observability-instrumentation'
+
+include 'gateway-service'
+include 'order-service'
+include 'inventory-service'
+
+project(':gateway-service').projectDir = file('services/gateway-service')
+project(':order-service').projectDir = file('services/order-service')
+project(':inventory-service').projectDir = file('services/inventory-service')

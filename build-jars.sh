@@ -24,29 +24,16 @@ export PATH=$JAVA_HOME/bin:$PATH
 echo "Using Java: $(java -version 2>&1 | head -1)"
 echo ""
 
-# Build Gateway Service
-echo "📦 Building Gateway Service..."
-cd services/gateway-service
-./gradlew clean build -x test --no-daemon
-echo "✅ Gateway Service built successfully"
+# Build all services using the root Gradle build
+echo "📦 Building all services with Gradle..."
+./gradlew clean build -x test --no-daemon --console=plain
+
 echo ""
-
-# Build Order Service  
-echo "📦 Building Order Service..."
-cd ../order-service
-./gradlew clean build -x test --no-daemon
-echo "✅ Order Service built successfully"
-echo ""
-
-# Build Inventory Service
-echo "📦 Building Inventory Service..."
-cd ../inventory-service
-./gradlew clean build -x test --no-daemon
-echo "✅ Inventory Service built successfully"
-echo ""
-
-cd ../..
-
 echo "✨ All services built successfully!"
+echo ""
+echo "Built artifacts:"
+echo "  - Gateway Service: services/gateway-service/build/libs/gateway-service-0.0.1-SNAPSHOT.jar"
+echo "  - Order Service: services/order-service/build/libs/order-service-0.0.1-SNAPSHOT.jar"
+echo "  - Inventory Service: services/inventory-service/build/libs/inventory-service-0.0.1-SNAPSHOT.jar"
 echo ""
 echo "You can now run: docker compose up -d"
