@@ -25,12 +25,10 @@ services:
     networks:
       - observability-net
     volumes:
-      - ./observability/liquibase:/liquibase/changelog:ro
+      - ./observability/liquibase:/liquibase/changelog
     command: 
       - --defaults-file=/liquibase/changelog/liquibase.properties
       - update
-    environment:
-      - LIQUIBASE_LOG_LEVEL=INFO
 
   # Microservices
   gateway-service:
