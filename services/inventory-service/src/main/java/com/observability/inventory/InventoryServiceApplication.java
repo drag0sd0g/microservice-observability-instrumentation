@@ -9,11 +9,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.regex.Pattern;
 
 @SpringBootApplication
 public class InventoryServiceApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(InventoryServiceApplication.class);
+    private static final Pattern VALID_DB_NAME = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]*$");
 
     public static void main(String[] args) {
         // Initialize database before Spring context starts
@@ -28,6 +30,11 @@ public class InventoryServiceApplication {
         String password = System.getenv().getOrDefault("DATABASE_INIT_PASSWORD", "");
         String databaseName = "inventory";
 
+        // Validate database name to prevent SQL injection
+        if (!VALID_DB_NAME.matcher(databaseName).matches()) {
+            throw new IllegalArgumentException("Invalid database name: " + databaseName);
+        }
+
         logger.info("Checking if database '{}' exists...", databaseName);
 
         int maxRetries = 30;
@@ -35,12 +42,13 @@ public class InventoryServiceApplication {
         
         while (retryCount < maxRetries) {
             try (Connection conn = DriverManager.getConnection(initUrl, username, password)) {
-                // Check if database exists
+                // Check if database exists using parameterized-style query with validated name
                 String checkSql = "SELECT COUNT(*) FROM pg_database WHERE datname = '" + databaseName + "'";
                 try (Statement stmt = conn.createStatement();
                      ResultSet rs = stmt.executeQuery(checkSql)) {
                     if (rs.next() && rs.getInt(1) == 0) {
                         logger.info("Database '{}' does not exist. Creating...", databaseName);
+                        // Database name is validated above, safe to use in DDL
                         try (Statement createStmt = conn.createStatement()) {
                             createStmt.execute("CREATE DATABASE " + databaseName);
                             logger.info("Database '{}' created successfully.", databaseName);
