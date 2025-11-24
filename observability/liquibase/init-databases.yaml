@@ -2,6 +2,7 @@ databaseChangeLog:
   - changeSet:
       id: create-orders-database
       author: system
+      runInTransaction: false
       preConditions:
         - onFail: MARK_RAN
         - sqlCheck:
@@ -17,6 +18,7 @@ databaseChangeLog:
   - changeSet:
       id: create-inventory-database
       author: system
+      runInTransaction: false
       preConditions:
         - onFail: MARK_RAN
         - sqlCheck:
