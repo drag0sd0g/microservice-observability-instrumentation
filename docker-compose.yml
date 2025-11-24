@@ -15,21 +15,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Database Initialization with Liquibase
-  liquibase-init:
-    image: liquibase/liquibase:4.25-alpine
-    container_name: liquibase-init
-    depends_on:
-      cockroachdb:
-        condition: service_healthy
-    networks:
-      - observability-net
-    volumes:
-      - ./observability/liquibase:/liquibase/changelog
-    command: 
-      - --defaults-file=/liquibase/changelog/liquibase.properties
-      - update
-
   # Microservices
   gateway-service:
     build:
@@ -70,11 +55,12 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
       - SPRING_DATASOURCE_URL=jdbc:postgresql://cockroachdb:26257/orders?sslmode=disable
+      - DATABASE_INIT_URL=jdbc:postgresql://cockroachdb:26257/defaultdb?sslmode=disable
+      - DATABASE_INIT_USERNAME=root
+      - DATABASE_INIT_PASSWORD=
     depends_on:
       cockroachdb:
         condition: service_healthy
-      liquibase-init:
-        condition: service_completed_successfully
       alloy:
         condition: service_started
     networks:
@@ -97,13 +83,14 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
       - SPRING_DATASOURCE_URL=jdbc:postgresql://cockroachdb:26257/inventory?sslmode=disable
+      - DATABASE_INIT_URL=jdbc:postgresql://cockroachdb:26257/defaultdb?sslmode=disable
+      - DATABASE_INIT_USERNAME=root
+      - DATABASE_INIT_PASSWORD=
       - CHAOS_LATENCY_ENABLED=false
       - CHAOS_ERROR_ENABLED=false
     depends_on:
       cockroachdb:
         condition: service_healthy
-      liquibase-init:
-        condition: service_completed_successfully
       alloy:
         condition: service_started
     networks:

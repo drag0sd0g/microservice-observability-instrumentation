@@ -142,6 +142,11 @@ This project showcases a complete observability solution featuring:
 - 8GB RAM minimum (recommended: 16GB)
 - Available ports: 3000, 3100, 3200, 4317, 4318, 8080, 8081, 8082, 8090, 9090, 9093, 12345, 26257
 
+### macOS Users
+- Ensure Docker Desktop has at least 6GB memory allocated (Settings → Resources → Memory)
+- Verify file sharing is enabled for your project directory (Settings → Resources → File Sharing)
+- For M1/M2 Macs: All images support ARM64 architecture
+
 ## 🚀 Quick Start
 
 ### 1. Clone the repository
@@ -150,6 +155,8 @@ This project showcases a complete observability solution featuring:
 git clone https://github.com/drag0sd0g/microservice-observability-instrumentation.git
 cd microservice-observability-instrumentation
 ```
+
+**Important**: All subsequent commands must be run from this directory (the project root).
 
 ### 2. Build the services
 
@@ -161,14 +168,17 @@ cd microservice-observability-instrumentation
 ### 3. Start the stack
 
 ```bash
-docker-compose up -d
+# Important: Run from the project root directory
+docker compose up -d
 ```
 
 Wait for all services to be healthy (30-60 seconds):
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
+
+If services fail to start, check the [Troubleshooting](#-troubleshooting) section.
 
 ### 4. Access the UIs
 
@@ -481,15 +491,72 @@ try {
 
 ## 🐛 Troubleshooting
 
+### macOS-Specific Issues
+
+#### Liquibase initialization fails with "file does not exist"
+If you see an error like `/liquibase/changelog/init-databases.yaml does not exist`:
+
+1. **Ensure Docker Desktop file sharing is enabled**:
+   - Open Docker Desktop → Settings/Preferences → Resources → File Sharing
+   - Ensure the directory containing this project is listed (or a parent directory)
+   - On macOS, `/Users` is usually shared by default
+   - Click "Apply & Restart" if you made changes
+
+2. **Run docker compose from the project root directory**:
+   ```bash
+   cd microservice-observability-instrumentation
+   docker compose up
+   ```
+   Do not run it from a parent or subdirectory.
+
+3. **Check file permissions**:
+   ```bash
+   ls -la observability/liquibase/
+   # Files should be readable (r-- at minimum)
+   ```
+
+4. **Verify volume mount is working**:
+   ```bash
+   docker run --rm -v "$(pwd)/observability/liquibase:/test" alpine ls -la /test
+   # Should list init-databases.yaml and liquibase.properties
+   ```
+
+#### Low memory (8GB RAM) configuration
+If services are failing to start or running slowly:
+
+1. **Increase Docker Desktop memory allocation**:
+   - Open Docker Desktop → Settings/Preferences → Resources
+   - Increase Memory to at least 6GB (out of 8GB total)
+   - Click "Apply & Restart"
+
+2. **Start services incrementally** instead of all at once:
+   ```bash
+   # Start database and observability stack first
+   docker compose up -d cockroachdb prometheus loki tempo grafana alloy
+   
+   # Wait for them to be healthy (30-60 seconds)
+   docker compose ps
+   
+   # Then start the microservices
+   docker compose up -d gateway-service order-service inventory-service
+   ```
+
+3. **Reduce resource usage** by stopping unused containers:
+   ```bash
+   # Run only essential services for development
+   docker compose up -d cockroachdb gateway-service order-service inventory-service grafana
+   ```
+
 ### Services not starting
 ```bash
 # Check logs
-docker-compose logs gateway-service
-docker-compose logs order-service
-docker-compose logs inventory-service
+docker compose logs gateway-service
+docker compose logs order-service
+docker compose logs inventory-service
+docker compose logs liquibase-init
 
 # Restart services
-docker-compose restart
+docker compose restart
 ```
 
 ### Database connection issues
@@ -499,12 +566,15 @@ curl http://localhost:8090/health?ready=1
 
 # Access CockroachDB SQL shell
 docker exec -it cockroachdb ./cockroach sql --insecure
+
+# Check if databases were created
+docker exec -it cockroachdb ./cockroach sql --insecure -e "SHOW DATABASES"
 ```
 
 ### Grafana dashboards not loading
 ```bash
 # Restart Grafana
-docker-compose restart grafana
+docker compose restart grafana
 
 # Check datasource connectivity in Grafana UI
 ```
@@ -512,7 +582,7 @@ docker-compose restart grafana
 ### No metrics/traces/logs appearing
 ```bash
 # Check Alloy logs
-docker-compose logs alloy
+docker compose logs alloy
 
 # Verify services are sending telemetry
 curl http://localhost:8080/actuator/prometheus
@@ -524,6 +594,19 @@ curl http://localhost:8080/actuator/prometheus
 netstat -tuln | grep -E '(3000|8080|9090)'
 
 # Stop conflicting services or change ports in docker-compose.yml
+```
+
+### Complete reset
+If all else fails, perform a complete reset:
+```bash
+# Stop and remove all containers, networks, and volumes
+docker compose down -v
+
+# Remove any dangling containers
+docker system prune -f
+
+# Start fresh
+docker compose up -d
 ```
 
 ## 📚 References

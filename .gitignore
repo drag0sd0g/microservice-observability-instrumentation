@@ -34,8 +34,9 @@ nbdist/
 # Log files
 *.log
 
-# Docker volumes
+# Docker volumes and overrides
 **/data/
+docker-compose.override.yml
 
 # Temporary files
 *.tmp
