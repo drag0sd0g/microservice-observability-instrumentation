@@ -34,6 +34,7 @@ services:
       - LIQUIBASE_COMMAND_PASSWORD=
       - LIQUIBASE_COMMAND_CHANGELOG_FILE=changelog/init-databases.yaml
       - LIQUIBASE_SEARCH_PATH=/liquibase
+      - LIQUIBASE_DRIVER=org.postgresql.Driver
     command: 
       - update
 
