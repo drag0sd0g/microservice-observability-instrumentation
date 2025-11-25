@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.regex.Pattern;
 
@@ -35,27 +34,18 @@ public class InventoryServiceApplication {
             throw new IllegalArgumentException("Invalid database name: " + databaseName);
         }
 
-        logger.info("Checking if database '{}' exists...", databaseName);
+        logger.info("Creating database '{}' if it does not exist...", databaseName);
 
         int maxRetries = 30;
         int retryCount = 0;
         
         while (retryCount < maxRetries) {
             try (Connection conn = DriverManager.getConnection(initUrl, username, password)) {
-                // Check if database exists using parameterized-style query with validated name
-                String checkSql = "SELECT COUNT(*) FROM pg_database WHERE datname = '" + databaseName + "'";
-                try (Statement stmt = conn.createStatement();
-                     ResultSet rs = stmt.executeQuery(checkSql)) {
-                    if (rs.next() && rs.getInt(1) == 0) {
-                        logger.info("Database '{}' does not exist. Creating...", databaseName);
-                        // Database name is validated above, safe to use in DDL
-                        try (Statement createStmt = conn.createStatement()) {
-                            createStmt.execute("CREATE DATABASE " + databaseName);
-                            logger.info("Database '{}' created successfully.", databaseName);
-                        }
-                    } else {
-                        logger.info("Database '{}' already exists.", databaseName);
-                    }
+                // Use CREATE DATABASE IF NOT EXISTS for CockroachDB compatibility
+                // Database name is validated above, safe to use in DDL
+                try (Statement createStmt = conn.createStatement()) {
+                    createStmt.execute("CREATE DATABASE IF NOT EXISTS " + databaseName);
+                    logger.info("Database '{}' is ready.", databaseName);
                 }
                 return; // Success
             } catch (Exception e) {
