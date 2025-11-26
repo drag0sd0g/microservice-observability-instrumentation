@@ -17,16 +17,19 @@ route:
 
 receivers:
   - name: 'default'
-    # Configure your default notification channel here
-    # Examples: webhook_configs, email_configs, slack_configs, pagerduty_configs
+    webhook_configs:
+      - url: 'http://gateway-service:8080/api/alerts/webhook'
+        send_resolved: true
     
   - name: 'critical-alerts'
-    # Configure critical alert notifications here
-    # Example: PagerDuty, Slack, email for on-call
+    webhook_configs:
+      - url: 'http://gateway-service:8080/api/alerts/webhook'
+        send_resolved: true
     
   - name: 'warning-alerts'
-    # Configure warning alert notifications here
-    # Example: Slack channel, email for team
+    webhook_configs:
+      - url: 'http://gateway-service:8080/api/alerts/webhook'
+        send_resolved: true
 
 inhibit_rules:
   - source_match:

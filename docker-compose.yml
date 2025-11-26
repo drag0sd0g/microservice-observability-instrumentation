@@ -168,6 +168,7 @@ services:
       - "4318:4318"    # OTLP HTTP receiver
     volumes:
       - ./observability/alloy/alloy-config.alloy:/etc/alloy/alloy-config.alloy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - prometheus
       - loki

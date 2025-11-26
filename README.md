@@ -6,6 +6,8 @@
 [![Java Version](https://img.shields.io/badge/Java-21-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
 [![Gradle Version](https://img.shields.io/badge/Gradle-8.11.1-blue.svg)](https://gradle.org/)
 
+🌐 **[日本語版はこちら (Japanese)](README.ja.md)**
+
 A comprehensive demonstration of modern observability practices using the Grafana stack (Prometheus, Loki, Tempo, Alloy, Grafana) with OpenTelemetry instrumentation in a distributed microservices architecture.
 
 ## 🎯 Project Overview

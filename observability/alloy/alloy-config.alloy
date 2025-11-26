@@ -62,7 +62,7 @@ loki.write "default" {
   }
 }
 
-// Export metrics to Prometheus (via remote write)
+// Export metrics to Prometheus (via remote write) - for OTLP metrics only
 otelcol.exporter.prometheus "default" {
   forward_to = [prometheus.remote_write.default.receiver]
 }
@@ -73,30 +73,70 @@ prometheus.remote_write "default" {
   }
 }
 
-// Scrape Prometheus metrics from services
-prometheus.scrape "gateway_service" {
-  targets = [
-    {"__address__" = "gateway-service:8080", "job" = "gateway-service"},
-  ]
-  forward_to = [prometheus.remote_write.default.receiver]
-  metrics_path = "/actuator/prometheus"
-  scrape_interval = "15s"
+// Docker container log discovery for services
+discovery.docker "services" {
+  host = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+  filter {
+    name = "name"
+    values = ["gateway-service", "order-service", "inventory-service"]
+  }
 }
 
-prometheus.scrape "order_service" {
-  targets = [
-    {"__address__" = "order-service:8081", "job" = "order-service"},
-  ]
-  forward_to = [prometheus.remote_write.default.receiver]
-  metrics_path = "/actuator/prometheus"
-  scrape_interval = "15s"
+// Relabel docker logs to extract service name
+discovery.relabel "docker_services" {
+  targets = discovery.docker.services.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "service_name"
+  }
 }
 
-prometheus.scrape "inventory_service" {
-  targets = [
-    {"__address__" = "inventory-service:8082", "job" = "inventory-service"},
-  ]
-  forward_to = [prometheus.remote_write.default.receiver]
-  metrics_path = "/actuator/prometheus"
-  scrape_interval = "15s"
+// Collect logs from docker containers
+loki.source.docker "default" {
+  host = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.docker_services.output
+  forward_to = [loki.process.docker_logs.receiver]
+  relabel_rules = discovery.relabel.docker_services.rules
+}
+
+// Process docker logs (parse JSON)
+loki.process "docker_logs" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.json {
+    expressions = {
+      level = "level",
+      message = "message",
+      logger = "logger_name",
+      timestamp = "timestamp",
+      trace_id = "trace_id",
+      span_id = "span_id",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+      logger = "",
+    }
+  }
+
+  stage.timestamp {
+    source = "timestamp"
+    format = "2006-01-02T15:04:05.999999999Z07:00"
+    fallback_formats = ["2006-01-02T15:04:05.999999999Z"]
+  }
+
+  stage.output {
+    source = "message"
+  }
 }

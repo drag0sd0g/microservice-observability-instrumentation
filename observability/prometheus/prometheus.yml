@@ -25,26 +25,29 @@ scrape_configs:
     static_configs:
       - targets: ['alloy:12345']
 
-  # Gateway Service
+  # Gateway Service - scraped by Prometheus directly for reliable metrics
   - job_name: 'gateway-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['gateway-service:8080']
-        labels:
-          service: 'gateway-service'
+    relabel_configs:
+      - target_label: service
+        replacement: 'gateway-service'
 
   # Order Service
   - job_name: 'order-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['order-service:8081']
-        labels:
-          service: 'order-service'
+    relabel_configs:
+      - target_label: service
+        replacement: 'order-service'
 
   # Inventory Service
   - job_name: 'inventory-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['inventory-service:8082']
-        labels:
-          service: 'inventory-service'
+    relabel_configs:
+      - target_label: service
+        replacement: 'inventory-service'

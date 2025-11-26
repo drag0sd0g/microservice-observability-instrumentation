@@ -12,7 +12,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -55,7 +55,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{service=\"gateway-service\"}[5m]))",
           "refId": "A"
@@ -67,7 +67,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -120,7 +120,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{service=\"gateway-service\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{service=\"gateway-service\"}[5m]))",
           "refId": "A"
@@ -132,7 +132,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -183,7 +183,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"gateway-service\"}[5m])) by (le))",
           "refId": "A"
@@ -195,7 +195,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -238,7 +238,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{service=\"order-service\"}[5m]))",
           "refId": "A"
@@ -250,7 +250,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -303,7 +303,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{service=\"order-service\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{service=\"order-service\"}[5m]))",
           "refId": "A"
@@ -315,7 +315,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -366,7 +366,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"order-service\"}[5m])) by (le))",
           "refId": "A"
@@ -378,7 +378,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -421,7 +421,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{service=\"inventory-service\"}[5m]))",
           "refId": "A"
@@ -433,7 +433,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -486,7 +486,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{service=\"inventory-service\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{service=\"inventory-service\"}[5m]))",
           "refId": "A"
@@ -498,7 +498,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -549,7 +549,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"inventory-service\"}[5m])) by (le))",
           "refId": "A"
@@ -561,7 +561,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -636,7 +636,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "expr": "orders_created_total",
           "legendFormat": "Orders Created",

@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.0' apply false
     id 'io.spring.dependency-management' version '1.1.4' apply false
+    id 'org.openapi.generator' version '7.2.0' apply false
 }
 
 subprojects {
@@ -36,6 +37,9 @@ subprojects {
         // Micrometer for metrics
         implementation 'io.micrometer:micrometer-registry-prometheus'
         
+        // Validation for generated models
+        implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+        
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
     }
 
@@ -51,27 +55,88 @@ project(':gateway-service') {
     }
 }
 
-// Configure services that use database
+// Configure order-service with database and OpenAPI
 project(':order-service') {
+    apply plugin: 'org.openapi.generator'
+    
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
         implementation 'org.liquibase:liquibase-core'
         implementation 'org.postgresql:postgresql:42.7.1'
+        implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
         testImplementation 'com.h2database:h2'
         testImplementation 'org.testcontainers:testcontainers:1.19.3'
         testImplementation 'org.testcontainers:postgresql:1.19.3'
         testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
     }
+    
+    openApiGenerate {
+        generatorName = "spring"
+        inputSpec = "$projectDir/src/main/resources/api/order-api.yaml"
+        outputDir = "$buildDir/generated"
+        apiPackage = "com.observability.order.api"
+        modelPackage = "com.observability.order.model"
+        configOptions = [
+            dateLibrary: "java8",
+            interfaceOnly: "true",
+            useTags: "true",
+            skipDefaultInterface: "true",
+            useSpringBoot3: "true",
+            documentationProvider: "none",
+            openApiNullable: "false"
+        ]
+    }
+    
+    sourceSets {
+        main {
+            java {
+                srcDir "$buildDir/generated/src/main/java"
+            }
+        }
+    }
+    
+    compileJava.dependsOn tasks.openApiGenerate
 }
 
+// Configure inventory-service with database and OpenAPI
 project(':inventory-service') {
+    apply plugin: 'org.openapi.generator'
+    
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
         implementation 'org.liquibase:liquibase-core'
         implementation 'org.postgresql:postgresql:42.7.1'
+        implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
         testImplementation 'com.h2database:h2'
         testImplementation 'org.testcontainers:testcontainers:1.19.3'
         testImplementation 'org.testcontainers:postgresql:1.19.3'
         testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
     }
+    
+    openApiGenerate {
+        generatorName = "spring"
+        inputSpec = "$projectDir/src/main/resources/api/inventory-api.yaml"
+        outputDir = "$buildDir/generated"
+        apiPackage = "com.observability.inventory.api"
+        modelPackage = "com.observability.inventory.model"
+        configOptions = [
+            dateLibrary: "java8",
+            interfaceOnly: "true",
+            useTags: "true",
+            skipDefaultInterface: "true",
+            useSpringBoot3: "true",
+            documentationProvider: "none",
+            openApiNullable: "false"
+        ]
+    }
+    
+    sourceSets {
+        main {
+            java {
+                srcDir "$buildDir/generated/src/main/java"
+            }
+        }
+    }
+    
+    compileJava.dependsOn tasks.openApiGenerate
 }

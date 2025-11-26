@@ -1,5 +1,6 @@
 package com.observability.inventory;
 
+import com.observability.inventory.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,27 +8,25 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryControllerUnitTest {
 
     @Mock
-    private InventoryRepository inventoryRepository;
+    private InventoryService inventoryService;
 
     private InventoryController inventoryController;
 
     @BeforeEach
     void setUp() {
-        inventoryController = new InventoryController();
-        ReflectionTestUtils.setField(inventoryController, "inventoryRepository", inventoryRepository);
+        inventoryController = new InventoryController(inventoryService);
     }
 
     @Test
@@ -41,10 +40,15 @@ class InventoryControllerUnitTest {
     }
 
     @Test
-    void checkInventoryReturnsItemWhenExists() {
+    void checkInventoryReturnsItemWhenExists() throws Exception {
         // Arrange
-        InventoryItem item = new InventoryItem("item123", "Test Item", 50);
-        when(inventoryRepository.findById("item123")).thenReturn(Optional.of(item));
+        Map<String, Object> inventoryResponse = new HashMap<>();
+        inventoryResponse.put("itemId", "item123");
+        inventoryResponse.put("name", "Test Item");
+        inventoryResponse.put("quantity", 50);
+        inventoryResponse.put("available", true);
+        
+        when(inventoryService.checkInventory("item123")).thenReturn(inventoryResponse);
 
         // Act
         ResponseEntity<?> response = inventoryController.checkInventory("item123");
@@ -60,13 +64,19 @@ class InventoryControllerUnitTest {
         assertThat(body.get("quantity")).isEqualTo(50);
         assertThat(body.get("available")).isEqualTo(true);
         
-        verify(inventoryRepository).findById("item123");
+        verify(inventoryService).checkInventory("item123");
     }
 
     @Test
-    void checkInventoryReturnsDefaultWhenItemDoesNotExist() {
+    void checkInventoryReturnsDefaultWhenItemDoesNotExist() throws Exception {
         // Arrange
-        when(inventoryRepository.findById("nonexistent")).thenReturn(Optional.empty());
+        Map<String, Object> defaultResponse = new HashMap<>();
+        defaultResponse.put("itemId", "nonexistent");
+        defaultResponse.put("name", "Item nonexistent");
+        defaultResponse.put("quantity", 100);
+        defaultResponse.put("available", true);
+        
+        when(inventoryService.checkInventory("nonexistent")).thenReturn(defaultResponse);
 
         // Act
         ResponseEntity<?> response = inventoryController.checkInventory("nonexistent");
@@ -82,14 +92,19 @@ class InventoryControllerUnitTest {
         assertThat(body.get("quantity")).isEqualTo(100);
         assertThat(body.get("available")).isEqualTo(true);
         
-        verify(inventoryRepository).findById("nonexistent");
+        verify(inventoryService).checkInventory("nonexistent");
     }
 
     @Test
-    void checkInventoryReturnsUnavailableWhenQuantityIsZero() {
+    void checkInventoryReturnsUnavailableWhenQuantityIsZero() throws Exception {
         // Arrange
-        InventoryItem item = new InventoryItem("item123", "Out of Stock Item", 0);
-        when(inventoryRepository.findById("item123")).thenReturn(Optional.of(item));
+        Map<String, Object> inventoryResponse = new HashMap<>();
+        inventoryResponse.put("itemId", "item123");
+        inventoryResponse.put("name", "Out of Stock Item");
+        inventoryResponse.put("quantity", 0);
+        inventoryResponse.put("available", false);
+        
+        when(inventoryService.checkInventory("item123")).thenReturn(inventoryResponse);
 
         // Act
         ResponseEntity<?> response = inventoryController.checkInventory("item123");
@@ -104,7 +119,7 @@ class InventoryControllerUnitTest {
     }
 
     @Test
-    void checkInventoryWithInvalidIdReturnsBadRequest() {
+    void checkInventoryWithInvalidIdReturnsBadRequest() throws Exception {
         // Act
         ResponseEntity<?> response1 = inventoryController.checkInventory(null);
         ResponseEntity<?> response2 = inventoryController.checkInventory("");
@@ -116,7 +131,7 @@ class InventoryControllerUnitTest {
         assertThat(response2.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response3.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response4.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(inventoryRepository, never()).findById(any());
+        verify(inventoryService, never()).checkInventory(anyString());
     }
 
     @Test
@@ -126,6 +141,15 @@ class InventoryControllerUnitTest {
         config.put("enabled", true);
         config.put("min", 200);
         config.put("max", 1000);
+
+        Map<String, Object> serviceResponse = new HashMap<>();
+        serviceResponse.put("enabled", true);
+        serviceResponse.put("min", 200);
+        serviceResponse.put("max", 1000);
+
+        when(inventoryService.configureChaosLatency(true, 200, 1000)).thenReturn(serviceResponse);
+        when(inventoryService.getChaosLatencyMin()).thenReturn(200);
+        when(inventoryService.getChaosLatencyMax()).thenReturn(1000);
 
         // Act
         ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosLatency(config);
@@ -171,6 +195,15 @@ class InventoryControllerUnitTest {
         config.put("min", 2000);
         config.put("max", 1000);
 
+        Map<String, Object> serviceResponse = new HashMap<>();
+        serviceResponse.put("enabled", false);
+        serviceResponse.put("min", 2000);
+        serviceResponse.put("max", 1000);
+
+        when(inventoryService.configureChaosLatency(null, 2000, 1000)).thenReturn(serviceResponse);
+        when(inventoryService.getChaosLatencyMin()).thenReturn(2000);
+        when(inventoryService.getChaosLatencyMax()).thenReturn(1000);
+
         // Act
         ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosLatency(config);
 
@@ -184,6 +217,12 @@ class InventoryControllerUnitTest {
         Map<String, Object> config = new HashMap<>();
         config.put("enabled", true);
         config.put("rate", 0.2);
+
+        Map<String, Object> serviceResponse = new HashMap<>();
+        serviceResponse.put("enabled", true);
+        serviceResponse.put("rate", 0.2);
+
+        when(inventoryService.configureChaosErrors(true, 0.2)).thenReturn(serviceResponse);
 
         // Act
         ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosErrors(config);
