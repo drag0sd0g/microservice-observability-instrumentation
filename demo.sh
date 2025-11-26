@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Demo script to simulate realistic traffic to the observability microservices
+# macOS-compatible: replaces `shuf` with a rand_range helper using $RANDOM
+# Fixed BSD `head -n-1` incompatibility by using `sed '$d'` to drop the last line.
 
 set -e
 
@@ -18,30 +20,46 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Helper: generate a random integer in [min,max]
+rand_range() {
+  local min=$1
+  local max=$2
+  # Ensure min <= max
+  if [ "$min" -gt "$max" ]; then
+    local tmp=$min
+    min=$max
+    max=$tmp
+  fi
+  echo $(( RANDOM % (max - min + 1) + min ))
+}
+
 # Function to create orders
 create_order() {
     local item_id=$1
     local quantity=$2
-    
+
     response=$(curl -s -w "\n%{http_code}" -X POST "$GATEWAY_URL/api/orders" \
         -H "Content-Type: application/json" \
         -d "{\"itemId\":\"$item_id\",\"quantity\":$quantity}")
-    
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | head -n-1)
-    
+
+    http_code=$(printf '%s\n' "$response" | tail -n1)
+    # Portable removal of last line (the http code) on macOS and Linux
+    body=$(printf '%s\n' "$response" | sed '$d')
+
     if [ "$http_code" -eq 201 ] || [ "$http_code" -eq 200 ]; then
         echo -e "${GREEN}✓${NC} Created order for item $item_id (quantity: $quantity)"
     else
         echo -e "${RED}✗${NC} Failed to create order for item $item_id (HTTP $http_code)"
+        # Optionally print body for debugging
+        echo "$body"
     fi
 }
 
 # Function to get orders
 get_orders() {
     response=$(curl -s -w "\n%{http_code}" "$GATEWAY_URL/api/orders")
-    http_code=$(echo "$response" | tail -n1)
-    
+    http_code=$(printf '%s\n' "$response" | tail -n1)
+
     if [ "$http_code" -eq 200 ]; then
         echo -e "${GREEN}✓${NC} Retrieved orders list"
     else
@@ -52,10 +70,10 @@ get_orders() {
 # Function to check inventory
 check_inventory() {
     local item_id=$1
-    
+
     response=$(curl -s -w "\n%{http_code}" "$GATEWAY_URL/api/inventory/$item_id")
-    http_code=$(echo "$response" | tail -n1)
-    
+    http_code=$(printf '%s\n' "$response" | tail -n1)
+
     if [ "$http_code" -eq 200 ]; then
         echo -e "${GREEN}✓${NC} Checked inventory for item $item_id"
     else
@@ -102,42 +120,43 @@ disable_chaos_errors() {
 # Main simulation loop
 simulate_traffic() {
     local duration=${1:-300}  # Default 5 minutes
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     local end_time=$((start_time + duration))
-    
+
     echo "Running traffic simulation for $duration seconds..."
     echo ""
-    
-    while [ $(date +%s) -lt $end_time ]; do
+
+    while [ "$(date +%s)" -lt "$end_time" ]; do
         # Normal traffic pattern
         for i in {1..5}; do
-            item_id="ITEM-$(shuf -i 1-10 -n 1)"
-            quantity=$(shuf -i 1-5 -n 1)
+            item_id="ITEM-$(rand_range 1 10)"
+            quantity=$(rand_range 1 5)
             create_order "$item_id" "$quantity"
             sleep 0.5
         done
-        
+
         # Check some inventory
         for i in {1..3}; do
-            item_id="ITEM-$(shuf -i 1-10 -n 1)"
+            item_id="ITEM-$(rand_range 1 10)"
             check_inventory "$item_id"
             sleep 0.3
         done
-        
+
         # Get orders periodically
         get_orders
         sleep 1
-        
-        # Randomly introduce chaos every 30-60 seconds
+
+        # Randomly introduce chaos occasionally (~10% chance each loop)
         if [ $((RANDOM % 10)) -eq 0 ]; then
             enable_chaos_latency
             sleep 10
             disable_chaos_latency
         fi
-        
+
         sleep 2
     done
-    
+
     echo ""
     echo "Traffic simulation completed!"
 }
@@ -146,7 +165,7 @@ simulate_traffic() {
 case "${1:-}" in
     "traffic")
         duration=${2:-300}
-        simulate_traffic $duration
+        simulate_traffic "$duration"
         ;;
     "chaos-latency-on")
         enable_chaos_latency
