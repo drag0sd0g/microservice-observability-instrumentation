@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.observability.inventory.util.LogUtils.sanitizeForLog;
+
 @Service
 public class InventoryService {
 
@@ -144,12 +146,5 @@ public class InventoryService {
 
     public int getChaosLatencyMax() {
         return chaosLatencyMax;
-    }
-
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
     }
 }

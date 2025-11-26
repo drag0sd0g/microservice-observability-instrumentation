@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.observability.gateway.util.LogUtils.sanitizeForLog;
+
 @RestController
 @RequestMapping("/api")
 public class GatewayController {
@@ -19,14 +21,6 @@ public class GatewayController {
 
     public GatewayController(GatewayService gatewayService) {
         this.gatewayService = gatewayService;
-    }
-
-    // Sanitize user input for logging to prevent log injection
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
     }
 
     @GetMapping("/health")

@@ -11,6 +11,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Map;
 
+import static com.observability.gateway.util.LogUtils.sanitizeForLog;
+
 @Service
 public class GatewayService {
 
@@ -123,12 +125,5 @@ public class GatewayService {
         }
 
         logger.debug("Full alert payload: {}", alertPayload);
-    }
-
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
     }
 }

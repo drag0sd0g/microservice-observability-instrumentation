@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+import static com.observability.order.util.LogUtils.sanitizeForLog;
+
 @Service
 public class OrderService {
 
@@ -71,12 +73,5 @@ public class OrderService {
     public Optional<Order> getOrderById(String id) {
         logger.info("Fetching order: {}", sanitizeForLog(id));
         return orderRepository.findById(id);
-    }
-
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
     }
 }

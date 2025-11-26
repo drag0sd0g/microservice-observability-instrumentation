@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.observability.order.util.LogUtils.sanitizeForLog;
+
 @RestController
 @RequestMapping("/api")
 public class OrderController {
@@ -21,14 +23,6 @@ public class OrderController {
 
     public OrderController(OrderService orderService) {
         this.orderService = orderService;
-    }
-
-    // Sanitize user input for logging to prevent log injection
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
     }
 
     @GetMapping("/health")

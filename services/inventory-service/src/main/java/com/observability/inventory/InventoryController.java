@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.observability.inventory.util.LogUtils.sanitizeForLog;
+
 @RestController
 @RequestMapping("/api")
 public class InventoryController {
@@ -19,14 +21,6 @@ public class InventoryController {
 
     public InventoryController(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
-    }
-
-    // Sanitize user input for logging to prevent log injection
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input.replace("\n", "_").replace("\r", "_").replace("\t", "_");
     }
 
     @GetMapping("/health")
