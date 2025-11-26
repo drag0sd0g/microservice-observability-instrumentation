@@ -555,7 +555,6 @@ try {
 docker compose logs gateway-service
 docker compose logs order-service
 docker compose logs inventory-service
-docker compose logs liquibase-init
 
 # サービスを再起動
 docker compose restart
@@ -564,7 +563,7 @@ docker compose restart
 ### データベース接続の問題
 ```bash
 # CockroachDBの状態を確認
-curl http://localhost:8090/health?ready=1
+curl http://localhost:8090/health
 
 # CockroachDB SQLシェルにアクセス
 docker exec -it cockroachdb ./cockroach sql --insecure

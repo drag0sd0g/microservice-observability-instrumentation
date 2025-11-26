@@ -555,7 +555,6 @@ If services are failing to start or running slowly:
 docker compose logs gateway-service
 docker compose logs order-service
 docker compose logs inventory-service
-docker compose logs liquibase-init
 
 # Restart services
 docker compose restart
@@ -564,7 +563,7 @@ docker compose restart
 ### Database connection issues
 ```bash
 # Check CockroachDB health
-curl http://localhost:8090/health?ready=1
+curl http://localhost:8090/health
 
 # Access CockroachDB SQL shell
 docker exec -it cockroachdb ./cockroach sql --insecure
