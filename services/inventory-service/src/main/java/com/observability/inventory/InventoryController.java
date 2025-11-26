@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.observability.inventory.util.LogUtils.sanitizeForLog;
-
 @RestController
 @RequestMapping("/api")
 public class InventoryController {
