@@ -1,38 +1,32 @@
 package com.observability.order;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.observability.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OrderControllerUnitTest {
 
     @Mock
-    private OrderRepository orderRepository;
+    private OrderService orderService;
 
     private OrderController orderController;
-    private MeterRegistry meterRegistry;
 
     @BeforeEach
     void setUp() {
-        meterRegistry = new SimpleMeterRegistry();
-        orderController = new OrderController(meterRegistry);
-        ReflectionTestUtils.setField(orderController, "orderRepository", orderRepository);
+        orderController = new OrderController(orderService);
     }
 
     @Test
@@ -55,7 +49,7 @@ class OrderControllerUnitTest {
         Order savedOrder = new Order("item123", 5);
         savedOrder.setId("order123");
         
-        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+        when(orderService.createOrder("item123", 5)).thenReturn(savedOrder);
 
         // Act
         ResponseEntity<?> response = orderController.createOrder(orderRequest);
@@ -71,7 +65,7 @@ class OrderControllerUnitTest {
         assertThat(body.get("quantity")).isEqualTo(5);
         assertThat(body.get("status")).isEqualTo("PENDING");
         
-        verify(orderRepository).save(any(Order.class));
+        verify(orderService).createOrder("item123", 5);
     }
 
     @Test
@@ -85,7 +79,7 @@ class OrderControllerUnitTest {
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderService, never()).createOrder(anyString(), anyInt());
     }
 
     @Test
@@ -99,7 +93,7 @@ class OrderControllerUnitTest {
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderService, never()).createOrder(anyString(), anyInt());
     }
 
     @Test
@@ -114,7 +108,7 @@ class OrderControllerUnitTest {
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderService, never()).createOrder(anyString(), anyInt());
     }
 
     @Test
@@ -129,7 +123,7 @@ class OrderControllerUnitTest {
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderService, never()).createOrder(anyString(), anyInt());
     }
 
     @Test
@@ -144,7 +138,7 @@ class OrderControllerUnitTest {
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderService, never()).createOrder(anyString(), anyInt());
     }
 
     @Test
@@ -155,7 +149,7 @@ class OrderControllerUnitTest {
         Order order2 = new Order("item2", 2);
         order2.setId("order2");
         
-        when(orderRepository.findAll()).thenReturn(Arrays.asList(order1, order2));
+        when(orderService.getAllOrders()).thenReturn(Arrays.asList(order1, order2));
 
         // Act
         ResponseEntity<List<Order>> response = orderController.getAllOrders();
@@ -163,7 +157,7 @@ class OrderControllerUnitTest {
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(2);
-        verify(orderRepository).findAll();
+        verify(orderService).getAllOrders();
     }
 
     @Test
@@ -172,7 +166,7 @@ class OrderControllerUnitTest {
         Order order = new Order("item123", 5);
         order.setId("order123");
         
-        when(orderRepository.findById("order123")).thenReturn(Optional.of(order));
+        when(orderService.getOrderById("order123")).thenReturn(Optional.of(order));
 
         // Act
         ResponseEntity<?> response = orderController.getOrder("order123");
@@ -182,20 +176,20 @@ class OrderControllerUnitTest {
         assertThat(response.getBody()).isInstanceOf(Order.class);
         Order returnedOrder = (Order) response.getBody();
         assertThat(returnedOrder.getId()).isEqualTo("order123");
-        verify(orderRepository).findById("order123");
+        verify(orderService).getOrderById("order123");
     }
 
     @Test
     void getOrderByIdReturnsNotFoundWhenDoesNotExist() {
         // Arrange
-        when(orderRepository.findById("nonexistent")).thenReturn(Optional.empty());
+        when(orderService.getOrderById("nonexistent")).thenReturn(Optional.empty());
 
         // Act
         ResponseEntity<?> response = orderController.getOrder("nonexistent");
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        verify(orderRepository).findById("nonexistent");
+        verify(orderService).getOrderById("nonexistent");
     }
 
     @Test
@@ -211,28 +205,6 @@ class OrderControllerUnitTest {
         assertThat(response2.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response3.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response4.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(orderRepository, never()).findById(any());
-    }
-
-    @Test
-    void createOrderIncrementsMetricsCounter() {
-        // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("itemId", "item123");
-        orderRequest.put("quantity", 5);
-
-        Order savedOrder = new Order("item123", 5);
-        savedOrder.setId("order123");
-        
-        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
-
-        double counterBefore = meterRegistry.counter("orders_created_total").count();
-
-        // Act
-        orderController.createOrder(orderRequest);
-
-        // Assert
-        double counterAfter = meterRegistry.counter("orders_created_total").count();
-        assertThat(counterAfter).isEqualTo(counterBefore + 1);
+        verify(orderService, never()).getOrderById(anyString());
     }
 }

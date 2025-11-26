@@ -1,15 +1,10 @@
 package com.observability.gateway;
 
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
+import com.observability.gateway.service.GatewayService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,21 +15,12 @@ public class GatewayController {
 
     private static final Logger logger = LoggerFactory.getLogger(GatewayController.class);
 
-    private final WebClient webClient;
+    private final GatewayService gatewayService;
 
-    @Autowired(required = false)
-    private Tracer tracer;
-
-    @Value("${services.order.url}")
-    private String orderServiceUrl;
-
-    @Value("${services.inventory.url}")
-    private String inventoryServiceUrl;
-
-    public GatewayController(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.build();
+    public GatewayController(GatewayService gatewayService) {
+        this.gatewayService = gatewayService;
     }
-    
+
     // Sanitize user input for logging to prevent log injection
     private String sanitizeForLog(String input) {
         if (input == null) {
@@ -54,66 +40,22 @@ public class GatewayController {
 
     @PostMapping("/orders")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> orderRequest) {
-        Span span = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("create-order-flow").startSpan();
-        }
         try {
-            logger.info("Creating order through gateway");
-            
-            // Check inventory first
-            String itemId = (String) orderRequest.get("itemId");
-            if (span != null) {
-                span.setAttribute("item.id", itemId);
-            }
-            
-            Map inventoryCheck = webClient.get()
-                .uri(inventoryServiceUrl + "/api/inventory/" + itemId)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
-            
-            if (inventoryCheck == null) {
-                logger.warn("Inventory check failed for item: {}", sanitizeForLog(itemId));
-                return ResponseEntity.badRequest().body(Map.of("error", "Inventory check failed"));
-            }
-            
-            // Create order
-            Map orderResponse = webClient.post()
-                .uri(orderServiceUrl + "/api/orders")
-                .bodyValue(orderRequest)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
-            
-            logger.info("Order created successfully");
-            if (span != null) {
-                span.setAttribute("order.status", "success");
-            }
+            Map<String, Object> orderResponse = gatewayService.createOrder(orderRequest);
             return ResponseEntity.status(201).body(orderResponse);
+        } catch (IllegalStateException e) {
+            logger.warn("Inventory check failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Inventory check failed"));
         } catch (Exception e) {
             logger.error("Error creating order", e);
-            if (span != null) {
-                span.setAttribute("order.status", "error");
-                span.recordException(e);
-            }
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
-        } finally {
-            if (span != null) {
-                span.end();
-            }
         }
     }
 
     @GetMapping("/orders")
     public ResponseEntity<?> getOrders() {
-        logger.info("Fetching all orders");
         try {
-            Object response = webClient.get()
-                .uri(orderServiceUrl + "/api/orders")
-                .retrieve()
-                .bodyToMono(Object.class)
-                .block();
+            Object response = gatewayService.getOrders();
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching orders", e);
@@ -127,15 +69,9 @@ public class GatewayController {
         if (id == null || id.trim().isEmpty() || id.length() > 255) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid order ID"));
         }
-        
-        logger.info("Fetching order: {}", sanitizeForLog(id));
+
         try {
-            Map response = webClient.get()
-                .uri(orderServiceUrl + "/api/orders/" + id)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
-            
+            Map<String, Object> response = gatewayService.getOrder(id);
             if (response == null) {
                 return ResponseEntity.notFound().build();
             }
@@ -152,18 +88,23 @@ public class GatewayController {
         if (itemId == null || itemId.trim().isEmpty() || itemId.length() > 255) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid item ID"));
         }
-        
-        logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
+
         try {
-            Map response = webClient.get()
-                .uri(inventoryServiceUrl + "/api/inventory/" + itemId)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+            Map<String, Object> response = gatewayService.checkInventory(itemId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error checking inventory: {}", sanitizeForLog(itemId), e);
             return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
+    }
+
+    @PostMapping("/alerts/webhook")
+    public ResponseEntity<Map<String, String>> receiveAlertWebhook(@RequestBody Map<String, Object> alertPayload) {
+        gatewayService.processAlertWebhook(alertPayload);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "received");
+        response.put("message", "Alert webhook processed successfully");
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,0 +1,222 @@
+openapi: 3.0.3
+info:
+  title: Inventory Service API
+  description: API for inventory management and stock checks
+  version: 1.0.0
+  contact:
+    name: Observability Demo
+servers:
+  - url: http://localhost:8082
+    description: Local development server
+
+paths:
+  /api/health:
+    get:
+      summary: Health check endpoint
+      operationId: health
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/inventory/{itemId}:
+    get:
+      summary: Check inventory for a specific item
+      operationId: checkInventory
+      tags:
+        - Inventory
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: The ID of the item to check
+          schema:
+            type: string
+            maxLength: 255
+      responses:
+        '200':
+          description: Inventory check successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryResponse'
+        '400':
+          description: Invalid item ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/chaos/latency:
+    post:
+      summary: Configure chaos latency injection
+      operationId: configureChaosLatency
+      tags:
+        - Chaos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChaosLatencyRequest'
+      responses:
+        '200':
+          description: Chaos latency configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChaosLatencyResponse'
+        '400':
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/chaos/errors:
+    post:
+      summary: Configure chaos error injection
+      operationId: configureChaosErrors
+      tags:
+        - Chaos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChaosErrorRequest'
+      responses:
+        '200':
+          description: Chaos error configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChaosErrorResponse'
+        '400':
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          example: UP
+        service:
+          type: string
+          example: inventory-service
+
+    InventoryResponse:
+      type: object
+      required:
+        - itemId
+        - name
+        - quantity
+        - available
+      properties:
+        itemId:
+          type: string
+          description: The unique identifier of the item
+          example: ITEM-123
+        name:
+          type: string
+          description: The name of the item
+          example: Test Item
+        quantity:
+          type: integer
+          description: The available quantity
+          example: 100
+        available:
+          type: boolean
+          description: Whether the item is available (quantity > 0)
+          example: true
+
+    ChaosLatencyRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Enable or disable latency injection
+          example: true
+        min:
+          type: integer
+          description: Minimum latency in milliseconds
+          minimum: 0
+          maximum: 10000
+          example: 500
+        max:
+          type: integer
+          description: Maximum latency in milliseconds
+          minimum: 0
+          maximum: 10000
+          example: 2000
+
+    ChaosLatencyResponse:
+      type: object
+      required:
+        - enabled
+        - min
+        - max
+      properties:
+        enabled:
+          type: boolean
+        min:
+          type: integer
+        max:
+          type: integer
+
+    ChaosErrorRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Enable or disable error injection
+          example: true
+        rate:
+          type: number
+          format: double
+          description: Error rate (0.0 to 1.0)
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.2
+
+    ChaosErrorResponse:
+      type: object
+      required:
+        - enabled
+        - rate
+      properties:
+        enabled:
+          type: boolean
+        rate:
+          type: number
+          format: double
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Invalid item ID
