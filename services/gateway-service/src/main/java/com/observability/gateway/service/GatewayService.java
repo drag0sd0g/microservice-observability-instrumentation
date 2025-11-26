@@ -124,6 +124,9 @@ public class GatewayService {
                 alerts instanceof java.util.List ? ((java.util.List<?>) alerts).size() : 1);
         }
 
-        logger.debug("Full alert payload: {}", alertPayload);
+        // Log sanitized payload summary for debugging (avoid logging raw user-controlled data)
+        if (logger.isDebugEnabled()) {
+            logger.debug("Alert payload received with {} keys", alertPayload.size());
+        }
     }
 }
