@@ -19,18 +19,19 @@ public class GatewayService {
     private static final Logger logger = LoggerFactory.getLogger(GatewayService.class);
 
     private final WebClient webClient;
+    private final Tracer tracer;
+    private final String orderServiceUrl;
+    private final String inventoryServiceUrl;
 
-    @Autowired(required = false)
-    private Tracer tracer;
-
-    @Value("${services.order.url}")
-    private String orderServiceUrl;
-
-    @Value("${services.inventory.url}")
-    private String inventoryServiceUrl;
-
-    public GatewayService(WebClient.Builder webClientBuilder) {
+    public GatewayService(
+            WebClient.Builder webClientBuilder,
+            @Value("${services.order.url}") String orderServiceUrl,
+            @Value("${services.inventory.url}") String inventoryServiceUrl,
+            @Autowired(required = false) Tracer tracer) {
         this.webClient = webClientBuilder.build();
+        this.orderServiceUrl = orderServiceUrl;
+        this.inventoryServiceUrl = inventoryServiceUrl;
+        this.tracer = tracer;
     }
 
     public Map<String, Object> createOrder(Map<String, Object> orderRequest) {

@@ -3,29 +3,87 @@ plugins {
     id 'org.springframework.boot' version '3.2.0' apply false
     id 'io.spring.dependency-management' version '1.1.4' apply false
     id 'org.openapi.generator' version '7.2.0' apply false
+    id 'jacoco'
 }
 
 subprojects {
     apply plugin: 'java'
-    apply plugin: 'org.springframework.boot'
-    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'jacoco'
 
     group = 'com.observability'
     version = '0.0.1-SNAPSHOT'
 
     java {
-        sourceCompatibility = '17'
+        sourceCompatibility = '21'
     }
 
     repositories {
         mavenCentral()
     }
 
+    jacoco {
+        toolVersion = "0.8.11"
+    }
+
+    tasks.named('test') {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+
+    jacocoTestCoverageVerification {
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.80
+                }
+            }
+        }
+    }
+}
+
+// Configure commons as a plain Java library (not a Spring Boot app)
+project(':commons') {
+    apply plugin: 'java-library'
+    apply plugin: 'io.spring.dependency-management'
+
+    // Disable bootJar for library module
+    configurations {
+        // No Spring Boot plugin needed
+    }
+
     dependencies {
+        api 'org.springframework.boot:spring-boot-starter:3.2.0'
+        
+        // OpenTelemetry
+        api 'io.opentelemetry:opentelemetry-api:1.32.0'
+        api 'io.opentelemetry:opentelemetry-sdk:1.32.0'
+        api 'io.opentelemetry:opentelemetry-exporter-otlp:1.32.0'
+        api 'io.opentelemetry.semconv:opentelemetry-semconv:1.21.0-alpha'
+        
+        testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.0'
+    }
+}
+
+// Common dependencies for service modules
+configure(subprojects.findAll { it.name != 'commons' }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencies {
+        implementation project(':commons')
+        
         implementation 'org.springframework.boot:spring-boot-starter-web'
         implementation 'org.springframework.boot:spring-boot-starter-actuator'
         
-        // OpenTelemetry
+        // OpenTelemetry (from commons)
         implementation 'io.opentelemetry:opentelemetry-api:1.32.0'
         implementation 'io.opentelemetry:opentelemetry-sdk:1.32.0'
         implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.32.0'
@@ -41,10 +99,6 @@ subprojects {
         implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
         
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    }
-
-    tasks.named('test') {
-        useJUnitPlatform()
     }
 }
 

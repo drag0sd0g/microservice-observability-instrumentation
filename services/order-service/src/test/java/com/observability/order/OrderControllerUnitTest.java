@@ -1,5 +1,8 @@
 package com.observability.order;
 
+import com.observability.order.model.CreateOrderRequest;
+import com.observability.order.model.ErrorResponse;
+import com.observability.order.model.OrderResponse;
 import com.observability.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,7 +10,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 
 import java.util.*;
 
@@ -31,39 +33,36 @@ class OrderControllerUnitTest {
 
     @Test
     void healthEndpointReturnsOk() {
-        ResponseEntity<Map<String, String>> response = orderController.health();
+        var response = orderController.health();
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("status")).isEqualTo("UP");
-        assertThat(response.getBody().get("service")).isEqualTo("order-service");
+        assertThat(response.getBody().getStatus()).isEqualTo("UP");
+        assertThat(response.getBody().getService()).isEqualTo("order-service");
     }
 
     @Test
     void createOrderWithValidDataReturnsCreated() {
         // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("itemId", "item123");
-        orderRequest.put("quantity", 5);
+        var orderRequest = new CreateOrderRequest("item123", 5);
 
-        Order savedOrder = new Order("item123", 5);
+        var savedOrder = new Order("item123", 5);
         savedOrder.setId("order123");
         
         when(orderService.createOrder("item123", 5)).thenReturn(savedOrder);
 
         // Act
-        ResponseEntity<?> response = orderController.createOrder(orderRequest);
+        var response = orderController.createOrder(orderRequest);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isInstanceOf(Map.class);
+        assertThat(response.getBody()).isInstanceOf(OrderResponse.class);
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertThat(body.get("id")).isEqualTo("order123");
-        assertThat(body.get("itemId")).isEqualTo("item123");
-        assertThat(body.get("quantity")).isEqualTo(5);
-        assertThat(body.get("status")).isEqualTo("PENDING");
+        var body = (OrderResponse) response.getBody();
+        assertThat(body.getId()).isEqualTo("order123");
+        assertThat(body.getItemId()).isEqualTo("item123");
+        assertThat(body.getQuantity()).isEqualTo(5);
+        assertThat(body.getStatus()).isEqualTo(OrderResponse.StatusEnum.PENDING);
         
         verify(orderService).createOrder("item123", 5);
     }
@@ -71,11 +70,11 @@ class OrderControllerUnitTest {
     @Test
     void createOrderWithMissingItemIdReturnsBadRequest() {
         // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("quantity", 5);
+        var orderRequest = new CreateOrderRequest();
+        orderRequest.setQuantity(5);
 
         // Act
-        ResponseEntity<?> response = orderController.createOrder(orderRequest);
+        var response = orderController.createOrder(orderRequest);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -85,11 +84,11 @@ class OrderControllerUnitTest {
     @Test
     void createOrderWithMissingQuantityReturnsBadRequest() {
         // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("itemId", "item123");
+        var orderRequest = new CreateOrderRequest();
+        orderRequest.setItemId("item123");
 
         // Act
-        ResponseEntity<?> response = orderController.createOrder(orderRequest);
+        var response = orderController.createOrder(orderRequest);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -99,12 +98,10 @@ class OrderControllerUnitTest {
     @Test
     void createOrderWithZeroQuantityReturnsBadRequest() {
         // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("itemId", "item123");
-        orderRequest.put("quantity", 0);
+        var orderRequest = new CreateOrderRequest("item123", 0);
 
         // Act
-        ResponseEntity<?> response = orderController.createOrder(orderRequest);
+        var response = orderController.createOrder(orderRequest);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -114,12 +111,10 @@ class OrderControllerUnitTest {
     @Test
     void createOrderWithNegativeQuantityReturnsBadRequest() {
         // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("itemId", "item123");
-        orderRequest.put("quantity", -5);
+        var orderRequest = new CreateOrderRequest("item123", -5);
 
         // Act
-        ResponseEntity<?> response = orderController.createOrder(orderRequest);
+        var response = orderController.createOrder(orderRequest);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -129,12 +124,10 @@ class OrderControllerUnitTest {
     @Test
     void createOrderWithExcessiveQuantityReturnsBadRequest() {
         // Arrange
-        Map<String, Object> orderRequest = new HashMap<>();
-        orderRequest.put("itemId", "item123");
-        orderRequest.put("quantity", 10001);
+        var orderRequest = new CreateOrderRequest("item123", 10001);
 
         // Act
-        ResponseEntity<?> response = orderController.createOrder(orderRequest);
+        var response = orderController.createOrder(orderRequest);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -144,15 +137,15 @@ class OrderControllerUnitTest {
     @Test
     void getAllOrdersReturnsOrderList() {
         // Arrange
-        Order order1 = new Order("item1", 1);
+        var order1 = new Order("item1", 1);
         order1.setId("order1");
-        Order order2 = new Order("item2", 2);
+        var order2 = new Order("item2", 2);
         order2.setId("order2");
         
         when(orderService.getAllOrders()).thenReturn(Arrays.asList(order1, order2));
 
         // Act
-        ResponseEntity<List<Order>> response = orderController.getAllOrders();
+        var response = orderController.getAllOrders();
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -163,18 +156,18 @@ class OrderControllerUnitTest {
     @Test
     void getOrderByIdReturnsOrderWhenExists() {
         // Arrange
-        Order order = new Order("item123", 5);
+        var order = new Order("item123", 5);
         order.setId("order123");
         
         when(orderService.getOrderById("order123")).thenReturn(Optional.of(order));
 
         // Act
-        ResponseEntity<?> response = orderController.getOrder("order123");
+        var response = orderController.getOrder("order123");
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isInstanceOf(Order.class);
-        Order returnedOrder = (Order) response.getBody();
+        assertThat(response.getBody()).isInstanceOf(OrderResponse.class);
+        var returnedOrder = (OrderResponse) response.getBody();
         assertThat(returnedOrder.getId()).isEqualTo("order123");
         verify(orderService).getOrderById("order123");
     }
@@ -185,7 +178,7 @@ class OrderControllerUnitTest {
         when(orderService.getOrderById("nonexistent")).thenReturn(Optional.empty());
 
         // Act
-        ResponseEntity<?> response = orderController.getOrder("nonexistent");
+        var response = orderController.getOrder("nonexistent");
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -195,10 +188,10 @@ class OrderControllerUnitTest {
     @Test
     void getOrderWithInvalidIdReturnsBadRequest() {
         // Act
-        ResponseEntity<?> response1 = orderController.getOrder(null);
-        ResponseEntity<?> response2 = orderController.getOrder("");
-        ResponseEntity<?> response3 = orderController.getOrder("   ");
-        ResponseEntity<?> response4 = orderController.getOrder("a".repeat(256));
+        var response1 = orderController.getOrder(null);
+        var response2 = orderController.getOrder("");
+        var response3 = orderController.getOrder("   ");
+        var response4 = orderController.getOrder("a".repeat(256));
 
         // Assert
         assertThat(response1.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

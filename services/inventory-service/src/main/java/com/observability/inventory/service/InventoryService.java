@@ -24,27 +24,29 @@ public class InventoryService {
     private final SecureRandom random = new SecureRandom();
 
     private final InventoryRepository inventoryRepository;
+    private final Tracer tracer;
 
-    @Autowired(required = false)
-    private Tracer tracer;
-
-    @Value("${chaos.latency.enabled:false}")
     private boolean chaosLatencyEnabled;
-
-    @Value("${chaos.latency.min:100}")
     private int chaosLatencyMin;
-
-    @Value("${chaos.latency.max:2000}")
     private int chaosLatencyMax;
-
-    @Value("${chaos.error.enabled:false}")
     private boolean chaosErrorEnabled;
-
-    @Value("${chaos.error.rate:0.1}")
     private double chaosErrorRate;
 
-    public InventoryService(InventoryRepository inventoryRepository) {
+    public InventoryService(
+            InventoryRepository inventoryRepository,
+            @Autowired(required = false) Tracer tracer,
+            @Value("${chaos.latency.enabled:false}") boolean chaosLatencyEnabled,
+            @Value("${chaos.latency.min:100}") int chaosLatencyMin,
+            @Value("${chaos.latency.max:2000}") int chaosLatencyMax,
+            @Value("${chaos.error.enabled:false}") boolean chaosErrorEnabled,
+            @Value("${chaos.error.rate:0.1}") double chaosErrorRate) {
         this.inventoryRepository = inventoryRepository;
+        this.tracer = tracer;
+        this.chaosLatencyEnabled = chaosLatencyEnabled;
+        this.chaosLatencyMin = chaosLatencyMin;
+        this.chaosLatencyMax = chaosLatencyMax;
+        this.chaosErrorEnabled = chaosErrorEnabled;
+        this.chaosErrorRate = chaosErrorRate;
     }
 
     public Map<String, Object> checkInventory(String itemId) throws InterruptedException {
