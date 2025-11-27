@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.observability.inventory.util.LogUtils.sanitizeForLog;
 
@@ -24,27 +23,29 @@ public class InventoryService {
     private final SecureRandom random = new SecureRandom();
 
     private final InventoryRepository inventoryRepository;
+    private final Tracer tracer;
 
-    @Autowired(required = false)
-    private Tracer tracer;
-
-    @Value("${chaos.latency.enabled:false}")
     private boolean chaosLatencyEnabled;
-
-    @Value("${chaos.latency.min:100}")
     private int chaosLatencyMin;
-
-    @Value("${chaos.latency.max:2000}")
     private int chaosLatencyMax;
-
-    @Value("${chaos.error.enabled:false}")
     private boolean chaosErrorEnabled;
-
-    @Value("${chaos.error.rate:0.1}")
     private double chaosErrorRate;
 
-    public InventoryService(InventoryRepository inventoryRepository) {
+    public InventoryService(
+            InventoryRepository inventoryRepository,
+            @Autowired(required = false) Tracer tracer,
+            @Value("${chaos.latency.enabled:false}") boolean chaosLatencyEnabled,
+            @Value("${chaos.latency.min:100}") int chaosLatencyMin,
+            @Value("${chaos.latency.max:2000}") int chaosLatencyMax,
+            @Value("${chaos.error.enabled:false}") boolean chaosErrorEnabled,
+            @Value("${chaos.error.rate:0.1}") double chaosErrorRate) {
         this.inventoryRepository = inventoryRepository;
+        this.tracer = tracer;
+        this.chaosLatencyEnabled = chaosLatencyEnabled;
+        this.chaosLatencyMin = chaosLatencyMin;
+        this.chaosLatencyMax = chaosLatencyMax;
+        this.chaosErrorEnabled = chaosErrorEnabled;
+        this.chaosErrorRate = chaosErrorRate;
     }
 
     public Map<String, Object> checkInventory(String itemId) throws InterruptedException {
@@ -59,7 +60,7 @@ public class InventoryService {
 
             // Chaos engineering: random latency
             if (chaosLatencyEnabled) {
-                int delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
+                var delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
                 if (span != null) {
                     span.setAttribute("chaos.latency_ms", delay);
                 }
@@ -78,9 +79,9 @@ public class InventoryService {
 
             logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
 
-            Optional<InventoryItem> itemOpt = inventoryRepository.findById(itemId);
+            var itemOpt = inventoryRepository.findById(itemId);
 
-            Map<String, Object> response = new HashMap<>();
+            var response = new HashMap<String, Object>();
             if (itemOpt.isEmpty()) {
                 // Return default inventory for demo purposes
                 response.put("itemId", itemId);
@@ -88,7 +89,7 @@ public class InventoryService {
                 response.put("quantity", 100);
                 response.put("available", true);
             } else {
-                InventoryItem item = itemOpt.get();
+                var item = itemOpt.get();
                 response.put("itemId", item.getItemId());
                 response.put("name", item.getName());
                 response.put("quantity", item.getQuantity());
@@ -116,7 +117,7 @@ public class InventoryService {
             this.chaosLatencyMax = max;
         }
 
-        Map<String, Object> response = new HashMap<>();
+        var response = new HashMap<String, Object>();
         response.put("enabled", chaosLatencyEnabled);
         response.put("min", chaosLatencyMin);
         response.put("max", chaosLatencyMax);
@@ -133,7 +134,7 @@ public class InventoryService {
             this.chaosErrorRate = rate;
         }
 
-        Map<String, Object> response = new HashMap<>();
+        var response = new HashMap<String, Object>();
         response.put("enabled", chaosErrorEnabled);
         response.put("rate", chaosErrorRate);
         return response;

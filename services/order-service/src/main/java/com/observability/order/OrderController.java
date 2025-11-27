@@ -1,15 +1,20 @@
 package com.observability.order;
 
+import com.observability.order.model.CreateOrderRequest;
+import com.observability.order.model.ErrorResponse;
+import com.observability.order.model.HealthResponse;
+import com.observability.order.model.OrderResponse;
 import com.observability.order.service.OrderService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
 
 import static com.observability.order.util.LogUtils.sanitizeForLog;
 
@@ -26,62 +31,76 @@ public class OrderController {
     }
 
     @GetMapping("/health")
-    public ResponseEntity<Map<String, String>> health() {
+    public ResponseEntity<HealthResponse> health() {
         logger.info("Health check requested");
-        Map<String, String> response = new HashMap<>();
-        response.put("status", "UP");
-        response.put("service", "order-service");
+        var response = new HealthResponse("UP", "order-service");
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/orders")
-    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> orderRequest) {
+    public ResponseEntity<?> createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         try {
-            String itemId = (String) orderRequest.get("itemId");
-            Integer quantity = (Integer) orderRequest.get("quantity");
+            var itemId = orderRequest.getItemId();
+            var quantity = orderRequest.getQuantity();
 
             if (itemId == null || quantity == null) {
                 logger.warn("Invalid order request received");
-                return ResponseEntity.badRequest().body(Map.of("error", "itemId and quantity are required"));
+                return ResponseEntity.badRequest().body(new ErrorResponse("itemId and quantity are required"));
             }
 
             // Validate quantity
             if (quantity <= 0 || quantity > 10000) {
                 logger.warn("Invalid quantity: {}", quantity);
-                return ResponseEntity.badRequest().body(Map.of("error", "Quantity must be between 1 and 10000"));
+                return ResponseEntity.badRequest().body(new ErrorResponse("Quantity must be between 1 and 10000"));
             }
 
-            Order order = orderService.createOrder(itemId, quantity);
+            var order = orderService.createOrder(itemId, quantity);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("id", order.getId());
-            response.put("itemId", order.getItemId());
-            response.put("quantity", order.getQuantity());
-            response.put("status", order.getStatus());
-            response.put("createdAt", order.getCreatedAt().toString());
+            var response = new OrderResponse()
+                .id(order.getId())
+                .itemId(order.getItemId())
+                .quantity(order.getQuantity())
+                .status(OrderResponse.StatusEnum.fromValue(order.getStatus()))
+                .createdAt(order.getCreatedAt().atOffset(ZoneOffset.UTC));
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             logger.error("Error creating order", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
+            return ResponseEntity.internalServerError().body(new ErrorResponse("Internal server error"));
         }
     }
 
     @GetMapping("/orders")
-    public ResponseEntity<List<Order>> getAllOrders() {
-        List<Order> orders = orderService.getAllOrders();
-        return ResponseEntity.ok(orders);
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        var orders = orderService.getAllOrders();
+        var response = orders.stream()
+            .map(order -> new OrderResponse()
+                .id(order.getId())
+                .itemId(order.getItemId())
+                .quantity(order.getQuantity())
+                .status(OrderResponse.StatusEnum.fromValue(order.getStatus()))
+                .createdAt(order.getCreatedAt().atOffset(ZoneOffset.UTC)))
+            .toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/orders/{id}")
     public ResponseEntity<?> getOrder(@PathVariable String id) {
         // Validate input to prevent injection attacks
         if (id == null || id.trim().isEmpty() || id.length() > 255) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid order ID"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid order ID"));
         }
 
         return orderService.getOrderById(id)
-            .map(ResponseEntity::ok)
+            .map(order -> {
+                var response = new OrderResponse()
+                    .id(order.getId())
+                    .itemId(order.getItemId())
+                    .quantity(order.getQuantity())
+                    .status(OrderResponse.StatusEnum.fromValue(order.getStatus()))
+                    .createdAt(order.getCreatedAt().atOffset(ZoneOffset.UTC));
+                return ResponseEntity.ok((Object) response);
+            })
             .orElse(ResponseEntity.notFound().build());
     }
 }

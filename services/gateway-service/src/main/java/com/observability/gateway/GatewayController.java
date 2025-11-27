@@ -26,7 +26,7 @@ public class GatewayController {
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         logger.info("Health check requested");
-        Map<String, String> response = new HashMap<>();
+        var response = new HashMap<String, String>();
         response.put("status", "UP");
         response.put("service", "gateway-service");
         return ResponseEntity.ok(response);
@@ -35,7 +35,7 @@ public class GatewayController {
     @PostMapping("/orders")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> orderRequest) {
         try {
-            Map<String, Object> orderResponse = gatewayService.createOrder(orderRequest);
+            var orderResponse = gatewayService.createOrder(orderRequest);
             return ResponseEntity.status(201).body(orderResponse);
         } catch (IllegalStateException e) {
             logger.warn("Inventory check failed: {}", e.getMessage());
@@ -49,7 +49,7 @@ public class GatewayController {
     @GetMapping("/orders")
     public ResponseEntity<?> getOrders() {
         try {
-            Object response = gatewayService.getOrders();
+            var response = gatewayService.getOrders();
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching orders", e);
@@ -65,7 +65,7 @@ public class GatewayController {
         }
 
         try {
-            Map<String, Object> response = gatewayService.getOrder(id);
+            var response = gatewayService.getOrder(id);
             if (response == null) {
                 return ResponseEntity.notFound().build();
             }
@@ -84,7 +84,7 @@ public class GatewayController {
         }
 
         try {
-            Map<String, Object> response = gatewayService.checkInventory(itemId);
+            var response = gatewayService.checkInventory(itemId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error checking inventory: {}", sanitizeForLog(itemId), e);
@@ -96,7 +96,7 @@ public class GatewayController {
     public ResponseEntity<Map<String, String>> receiveAlertWebhook(@RequestBody Map<String, Object> alertPayload) {
         gatewayService.processAlertWebhook(alertPayload);
 
-        Map<String, String> response = new HashMap<>();
+        var response = new HashMap<String, String>();
         response.put("status", "received");
         response.put("message", "Alert webhook processed successfully");
         return ResponseEntity.ok(response);

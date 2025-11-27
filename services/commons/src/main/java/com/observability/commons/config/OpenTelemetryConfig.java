@@ -1,4 +1,4 @@
-package com.observability.gateway;
+package com.observability.commons.config;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
@@ -27,7 +27,7 @@ public class OpenTelemetryConfig {
 
     @Bean
     public OpenTelemetry openTelemetry() {
-        Resource resource = Resource.getDefault()
+        var resource = Resource.getDefault()
             .merge(Resource.create(
                 io.opentelemetry.api.common.Attributes.of(
                     ResourceAttributes.SERVICE_NAME, serviceName,
@@ -35,7 +35,7 @@ public class OpenTelemetryConfig {
                 )
             ));
 
-        SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
+        var sdkTracerProvider = SdkTracerProvider.builder()
             .addSpanProcessor(BatchSpanProcessor.builder(
                 OtlpGrpcSpanExporter.builder()
                     .setEndpoint(otlpEndpoint)

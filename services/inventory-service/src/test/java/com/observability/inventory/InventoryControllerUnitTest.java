@@ -1,5 +1,6 @@
 package com.observability.inventory;
 
+import com.observability.inventory.model.*;
 import com.observability.inventory.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,18 +32,18 @@ class InventoryControllerUnitTest {
 
     @Test
     void healthEndpointReturnsOk() {
-        ResponseEntity<Map<String, String>> response = inventoryController.health();
+        var response = inventoryController.health();
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("status")).isEqualTo("UP");
-        assertThat(response.getBody().get("service")).isEqualTo("inventory-service");
+        assertThat(response.getBody().getStatus()).isEqualTo("UP");
+        assertThat(response.getBody().getService()).isEqualTo("inventory-service");
     }
 
     @Test
     void checkInventoryReturnsItemWhenExists() throws Exception {
         // Arrange
-        Map<String, Object> inventoryResponse = new HashMap<>();
+        var inventoryResponse = new HashMap<String, Object>();
         inventoryResponse.put("itemId", "item123");
         inventoryResponse.put("name", "Test Item");
         inventoryResponse.put("quantity", 50);
@@ -51,18 +52,17 @@ class InventoryControllerUnitTest {
         when(inventoryService.checkInventory("item123")).thenReturn(inventoryResponse);
 
         // Act
-        ResponseEntity<?> response = inventoryController.checkInventory("item123");
+        var response = inventoryController.checkInventory("item123");
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isInstanceOf(Map.class);
+        assertThat(response.getBody()).isInstanceOf(InventoryResponse.class);
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertThat(body.get("itemId")).isEqualTo("item123");
-        assertThat(body.get("name")).isEqualTo("Test Item");
-        assertThat(body.get("quantity")).isEqualTo(50);
-        assertThat(body.get("available")).isEqualTo(true);
+        var body = (InventoryResponse) response.getBody();
+        assertThat(body.getItemId()).isEqualTo("item123");
+        assertThat(body.getName()).isEqualTo("Test Item");
+        assertThat(body.getQuantity()).isEqualTo(50);
+        assertThat(body.getAvailable()).isEqualTo(true);
         
         verify(inventoryService).checkInventory("item123");
     }
@@ -70,7 +70,7 @@ class InventoryControllerUnitTest {
     @Test
     void checkInventoryReturnsDefaultWhenItemDoesNotExist() throws Exception {
         // Arrange
-        Map<String, Object> defaultResponse = new HashMap<>();
+        var defaultResponse = new HashMap<String, Object>();
         defaultResponse.put("itemId", "nonexistent");
         defaultResponse.put("name", "Item nonexistent");
         defaultResponse.put("quantity", 100);
@@ -79,18 +79,17 @@ class InventoryControllerUnitTest {
         when(inventoryService.checkInventory("nonexistent")).thenReturn(defaultResponse);
 
         // Act
-        ResponseEntity<?> response = inventoryController.checkInventory("nonexistent");
+        var response = inventoryController.checkInventory("nonexistent");
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isInstanceOf(Map.class);
+        assertThat(response.getBody()).isInstanceOf(InventoryResponse.class);
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertThat(body.get("itemId")).isEqualTo("nonexistent");
-        assertThat(body.get("name")).isEqualTo("Item nonexistent");
-        assertThat(body.get("quantity")).isEqualTo(100);
-        assertThat(body.get("available")).isEqualTo(true);
+        var body = (InventoryResponse) response.getBody();
+        assertThat(body.getItemId()).isEqualTo("nonexistent");
+        assertThat(body.getName()).isEqualTo("Item nonexistent");
+        assertThat(body.getQuantity()).isEqualTo(100);
+        assertThat(body.getAvailable()).isEqualTo(true);
         
         verify(inventoryService).checkInventory("nonexistent");
     }
@@ -98,7 +97,7 @@ class InventoryControllerUnitTest {
     @Test
     void checkInventoryReturnsUnavailableWhenQuantityIsZero() throws Exception {
         // Arrange
-        Map<String, Object> inventoryResponse = new HashMap<>();
+        var inventoryResponse = new HashMap<String, Object>();
         inventoryResponse.put("itemId", "item123");
         inventoryResponse.put("name", "Out of Stock Item");
         inventoryResponse.put("quantity", 0);
@@ -107,24 +106,23 @@ class InventoryControllerUnitTest {
         when(inventoryService.checkInventory("item123")).thenReturn(inventoryResponse);
 
         // Act
-        ResponseEntity<?> response = inventoryController.checkInventory("item123");
+        var response = inventoryController.checkInventory("item123");
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertThat(body.get("available")).isEqualTo(false);
-        assertThat(body.get("quantity")).isEqualTo(0);
+        var body = (InventoryResponse) response.getBody();
+        assertThat(body.getAvailable()).isEqualTo(false);
+        assertThat(body.getQuantity()).isEqualTo(0);
     }
 
     @Test
     void checkInventoryWithInvalidIdReturnsBadRequest() throws Exception {
         // Act
-        ResponseEntity<?> response1 = inventoryController.checkInventory(null);
-        ResponseEntity<?> response2 = inventoryController.checkInventory("");
-        ResponseEntity<?> response3 = inventoryController.checkInventory("   ");
-        ResponseEntity<?> response4 = inventoryController.checkInventory("a".repeat(256));
+        var response1 = inventoryController.checkInventory(null);
+        var response2 = inventoryController.checkInventory("");
+        var response3 = inventoryController.checkInventory("   ");
+        var response4 = inventoryController.checkInventory("a".repeat(256));
 
         // Assert
         assertThat(response1.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -137,12 +135,12 @@ class InventoryControllerUnitTest {
     @Test
     void configureChaosLatencyUpdatesSettings() {
         // Arrange
-        Map<String, Object> config = new HashMap<>();
-        config.put("enabled", true);
-        config.put("min", 200);
-        config.put("max", 1000);
+        var config = new ChaosLatencyRequest()
+            .enabled(true)
+            .min(200)
+            .max(1000);
 
-        Map<String, Object> serviceResponse = new HashMap<>();
+        var serviceResponse = new HashMap<String, Object>();
         serviceResponse.put("enabled", true);
         serviceResponse.put("min", 200);
         serviceResponse.put("max", 1000);
@@ -152,24 +150,24 @@ class InventoryControllerUnitTest {
         when(inventoryService.getChaosLatencyMax()).thenReturn(1000);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosLatency(config);
+        var response = inventoryController.configureChaosLatency(config);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("enabled")).isEqualTo(true);
-        assertThat(response.getBody().get("min")).isEqualTo(200);
-        assertThat(response.getBody().get("max")).isEqualTo(1000);
+        assertThat(response.getBody()).isInstanceOf(ChaosLatencyResponse.class);
+        var body = (ChaosLatencyResponse) response.getBody();
+        assertThat(body.getEnabled()).isEqualTo(true);
+        assertThat(body.getMin()).isEqualTo(200);
+        assertThat(body.getMax()).isEqualTo(1000);
     }
 
     @Test
     void configureChaosLatencyRejectsInvalidMin() {
         // Arrange
-        Map<String, Object> config = new HashMap<>();
-        config.put("min", -10);
+        var config = new ChaosLatencyRequest().min(-10);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosLatency(config);
+        var response = inventoryController.configureChaosLatency(config);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -178,11 +176,10 @@ class InventoryControllerUnitTest {
     @Test
     void configureChaosLatencyRejectsInvalidMax() {
         // Arrange
-        Map<String, Object> config = new HashMap<>();
-        config.put("max", 20000);
+        var config = new ChaosLatencyRequest().max(20000);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosLatency(config);
+        var response = inventoryController.configureChaosLatency(config);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -191,11 +188,11 @@ class InventoryControllerUnitTest {
     @Test
     void configureChaosLatencyRejectsMinGreaterThanMax() {
         // Arrange
-        Map<String, Object> config = new HashMap<>();
-        config.put("min", 2000);
-        config.put("max", 1000);
+        var config = new ChaosLatencyRequest()
+            .min(2000)
+            .max(1000);
 
-        Map<String, Object> serviceResponse = new HashMap<>();
+        var serviceResponse = new HashMap<String, Object>();
         serviceResponse.put("enabled", false);
         serviceResponse.put("min", 2000);
         serviceResponse.put("max", 1000);
@@ -205,7 +202,7 @@ class InventoryControllerUnitTest {
         when(inventoryService.getChaosLatencyMax()).thenReturn(1000);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosLatency(config);
+        var response = inventoryController.configureChaosLatency(config);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -214,38 +211,36 @@ class InventoryControllerUnitTest {
     @Test
     void configureChaosErrorsUpdatesSettings() {
         // Arrange
-        Map<String, Object> config = new HashMap<>();
-        config.put("enabled", true);
-        config.put("rate", 0.2);
+        var config = new ChaosErrorRequest()
+            .enabled(true)
+            .rate(0.2);
 
-        Map<String, Object> serviceResponse = new HashMap<>();
+        var serviceResponse = new HashMap<String, Object>();
         serviceResponse.put("enabled", true);
         serviceResponse.put("rate", 0.2);
 
         when(inventoryService.configureChaosErrors(true, 0.2)).thenReturn(serviceResponse);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = inventoryController.configureChaosErrors(config);
+        var response = inventoryController.configureChaosErrors(config);
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("enabled")).isEqualTo(true);
-        assertThat(response.getBody().get("rate")).isEqualTo(0.2);
+        assertThat(response.getBody()).isInstanceOf(ChaosErrorResponse.class);
+        var body = (ChaosErrorResponse) response.getBody();
+        assertThat(body.getEnabled()).isEqualTo(true);
+        assertThat(body.getRate()).isEqualTo(0.2);
     }
 
     @Test
     void configureChaosErrorsRejectsInvalidRate() {
         // Arrange
-        Map<String, Object> config1 = new HashMap<>();
-        config1.put("rate", -0.1);
-
-        Map<String, Object> config2 = new HashMap<>();
-        config2.put("rate", 1.5);
+        var config1 = new ChaosErrorRequest().rate(-0.1);
+        var config2 = new ChaosErrorRequest().rate(1.5);
 
         // Act
-        ResponseEntity<Map<String, Object>> response1 = inventoryController.configureChaosErrors(config1);
-        ResponseEntity<Map<String, Object>> response2 = inventoryController.configureChaosErrors(config2);
+        var response1 = inventoryController.configureChaosErrors(config1);
+        var response2 = inventoryController.configureChaosErrors(config2);
 
         // Assert
         assertThat(response1.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

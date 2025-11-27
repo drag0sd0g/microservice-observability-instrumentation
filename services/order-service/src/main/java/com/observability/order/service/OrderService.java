@@ -23,15 +23,17 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final Counter ordersCreatedCounter;
+    private final Tracer tracer;
 
-    @Autowired(required = false)
-    private Tracer tracer;
-
-    public OrderService(OrderRepository orderRepository, MeterRegistry meterRegistry) {
+    public OrderService(
+            OrderRepository orderRepository,
+            MeterRegistry meterRegistry,
+            @Autowired(required = false) Tracer tracer) {
         this.orderRepository = orderRepository;
         this.ordersCreatedCounter = Counter.builder("orders_created_total")
             .description("Total number of orders created")
             .register(meterRegistry);
+        this.tracer = tracer;
     }
 
     public Order createOrder(String itemId, Integer quantity) {
@@ -45,7 +47,7 @@ public class OrderService {
                 span.setAttribute("order.quantity", quantity);
             }
 
-            Order order = new Order(itemId, quantity);
+            var order = new Order(itemId, quantity);
             order = orderRepository.save(order);
 
             ordersCreatedCounter.increment();
