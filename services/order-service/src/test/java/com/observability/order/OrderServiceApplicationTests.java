@@ -21,11 +21,6 @@ class OrderServiceApplicationTests {
     private MockMvc mockMvc;
 
     @Test
-    void contextLoads() {
-        // Context loads successfully
-    }
-
-    @Test
     void healthEndpointReturnsOk() throws Exception {
         mockMvc.perform(get("/api/health"))
             .andExpect(status().isOk())

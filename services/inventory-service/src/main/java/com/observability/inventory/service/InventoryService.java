@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.observability.inventory.util.LogUtils.sanitizeForLog;
 
@@ -81,27 +82,30 @@ public class InventoryService {
 
             var itemOpt = inventoryRepository.findById(itemId);
 
-            var response = new HashMap<String, Object>();
-            if (itemOpt.isEmpty()) {
-                // Return default inventory for demo purposes
-                response.put("itemId", itemId);
-                response.put("name", "Item " + itemId);
-                response.put("quantity", 100);
-                response.put("available", true);
-            } else {
-                var item = itemOpt.get();
-                response.put("itemId", item.getItemId());
-                response.put("name", item.getName());
-                response.put("quantity", item.getQuantity());
-                response.put("available", item.getQuantity() > 0);
-            }
-
-            return response;
+            return buildResponse(itemId, itemOpt);
         } finally {
             if (span != null) {
                 span.end();
             }
         }
+    }
+
+    private static HashMap<String, Object> buildResponse(String itemId, Optional<InventoryItem> itemOpt) {
+        var response = new HashMap<String, Object>();
+        if (itemOpt.isEmpty()) {
+            // Return default inventory for demo purposes
+            response.put("itemId", itemId);
+            response.put("name", "Item " + itemId);
+            response.put("quantity", 100);
+            response.put("available", true);
+        } else {
+            var item = itemOpt.get();
+            response.put("itemId", item.getItemId());
+            response.put("name", item.getName());
+            response.put("quantity", item.getQuantity());
+            response.put("available", item.getQuantity() > 0);
+        }
+        return response;
     }
 
     public Map<String, Object> configureChaosLatency(Boolean enabled, Integer min, Integer max) {

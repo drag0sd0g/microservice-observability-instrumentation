@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import io.opentelemetry.api.common.Attributes;
 
 @Configuration
 @ConditionalOnProperty(name = "otel.sdk.disabled", havingValue = "false", matchIfMissing = true)
@@ -29,7 +30,7 @@ public class OpenTelemetryConfig {
     public OpenTelemetry openTelemetry() {
         var resource = Resource.getDefault()
             .merge(Resource.create(
-                io.opentelemetry.api.common.Attributes.of(
+                Attributes.of(
                     ResourceAttributes.SERVICE_NAME, serviceName,
                     ResourceAttributes.SERVICE_VERSION, "1.0.0"
                 )

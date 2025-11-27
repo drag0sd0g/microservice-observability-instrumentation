@@ -15,15 +15,6 @@ public class InventoryItem {
     @Column(nullable = false)
     private String name;
 
-    public InventoryItem() {
-    }
-
-    public InventoryItem(String itemId, String name, Integer quantity) {
-        this.itemId = itemId;
-        this.name = name;
-        this.quantity = quantity;
-    }
-
     // Getters and setters
     public String getItemId() {
         return itemId;
