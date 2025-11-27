@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.observability.gateway.util.LogUtils.sanitizeForLog;
@@ -34,6 +35,7 @@ public class GatewayService {
         this.tracer = tracer;
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> createOrder(Map<String, Object> orderRequest) {
         Span span = null;
         if (tracer != null) {
@@ -43,12 +45,12 @@ public class GatewayService {
             logger.info("Creating order through gateway");
 
             // Check inventory first
-            String itemId = (String) orderRequest.get("itemId");
+            var itemId = (String) orderRequest.get("itemId");
             if (span != null) {
                 span.setAttribute("item.id", itemId);
             }
 
-            Map inventoryCheck = webClient.get()
+            var inventoryCheck = webClient.get()
                 .uri(inventoryServiceUrl + "/api/inventory/" + itemId)
                 .retrieve()
                 .bodyToMono(Map.class)
@@ -60,7 +62,7 @@ public class GatewayService {
             }
 
             // Create order
-            Map orderResponse = webClient.post()
+            var orderResponse = (Map<String, Object>) webClient.post()
                 .uri(orderServiceUrl + "/api/orders")
                 .bodyValue(orderRequest)
                 .retrieve()
@@ -95,6 +97,7 @@ public class GatewayService {
             .block();
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getOrder(String id) {
         logger.info("Fetching order: {}", sanitizeForLog(id));
         return webClient.get()
@@ -104,6 +107,7 @@ public class GatewayService {
             .block();
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> checkInventory(String itemId) {
         logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
         return webClient.get()
@@ -116,13 +120,13 @@ public class GatewayService {
     public void processAlertWebhook(Map<String, Object> alertPayload) {
         logger.info("Alert webhook received from Alertmanager");
 
-        Object alerts = alertPayload.get("alerts");
-        String status = (String) alertPayload.get("status");
+        var alerts = alertPayload.get("alerts");
+        var status = (String) alertPayload.get("status");
 
         if (alerts != null) {
             logger.info("Alert status: {}, number of alerts: {}",
                 sanitizeForLog(status),
-                alerts instanceof java.util.List ? ((java.util.List<?>) alerts).size() : 1);
+                alerts instanceof List ? ((List<?>) alerts).size() : 1);
         }
 
         // Log sanitized payload summary for debugging (avoid logging raw user-controlled data)

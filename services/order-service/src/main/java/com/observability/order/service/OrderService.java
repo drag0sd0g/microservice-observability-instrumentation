@@ -47,7 +47,7 @@ public class OrderService {
                 span.setAttribute("order.quantity", quantity);
             }
 
-            Order order = new Order(itemId, quantity);
+            var order = new Order(itemId, quantity);
             order = orderRepository.save(order);
 
             ordersCreatedCounter.increment();

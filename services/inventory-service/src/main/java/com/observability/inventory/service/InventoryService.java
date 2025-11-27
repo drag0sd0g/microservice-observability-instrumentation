@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.observability.inventory.util.LogUtils.sanitizeForLog;
 
@@ -61,7 +60,7 @@ public class InventoryService {
 
             // Chaos engineering: random latency
             if (chaosLatencyEnabled) {
-                int delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
+                var delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
                 if (span != null) {
                     span.setAttribute("chaos.latency_ms", delay);
                 }
@@ -80,9 +79,9 @@ public class InventoryService {
 
             logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
 
-            Optional<InventoryItem> itemOpt = inventoryRepository.findById(itemId);
+            var itemOpt = inventoryRepository.findById(itemId);
 
-            Map<String, Object> response = new HashMap<>();
+            var response = new HashMap<String, Object>();
             if (itemOpt.isEmpty()) {
                 // Return default inventory for demo purposes
                 response.put("itemId", itemId);
@@ -90,7 +89,7 @@ public class InventoryService {
                 response.put("quantity", 100);
                 response.put("available", true);
             } else {
-                InventoryItem item = itemOpt.get();
+                var item = itemOpt.get();
                 response.put("itemId", item.getItemId());
                 response.put("name", item.getName());
                 response.put("quantity", item.getQuantity());
@@ -118,7 +117,7 @@ public class InventoryService {
             this.chaosLatencyMax = max;
         }
 
-        Map<String, Object> response = new HashMap<>();
+        var response = new HashMap<String, Object>();
         response.put("enabled", chaosLatencyEnabled);
         response.put("min", chaosLatencyMin);
         response.put("max", chaosLatencyMax);
@@ -135,7 +134,7 @@ public class InventoryService {
             this.chaosErrorRate = rate;
         }
 
-        Map<String, Object> response = new HashMap<>();
+        var response = new HashMap<String, Object>();
         response.put("enabled", chaosErrorEnabled);
         response.put("rate", chaosErrorRate);
         return response;
