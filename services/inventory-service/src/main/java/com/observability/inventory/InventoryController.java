@@ -7,6 +7,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST controller for inventory management operations.
+ * 
+ * <p>This controller handles inventory checks and chaos engineering
+ * configuration for testing and demonstration purposes.</p>
+ *
+ * @since 1.0.0
+ */
 @RestController
 @RequestMapping("/api")
 public class InventoryController {
@@ -15,17 +23,33 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
 
-    public InventoryController(InventoryService inventoryService) {
+    /**
+     * Constructs a new InventoryController with the required service.
+     *
+     * @param inventoryService the inventory service for handling business logic
+     */
+    public InventoryController(final InventoryService inventoryService) {
         this.inventoryService = inventoryService;
     }
 
+    /**
+     * Health check endpoint for service status monitoring.
+     *
+     * @return ResponseEntity with service status information
+     */
     @GetMapping("/health")
     public ResponseEntity<HealthResponse> health() {
         logger.info("Health check requested");
-        var response = new HealthResponse("UP", "inventory-service");
+        final var response = new HealthResponse("UP", "inventory-service");
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Checks inventory availability for a specific item.
+     *
+     * @param itemId the item ID to check inventory for
+     * @return ResponseEntity with inventory information or error details
+     */
     @GetMapping("/inventory/{itemId}")
     public ResponseEntity<?> checkInventory(@PathVariable String itemId) {
         // Validate input to prevent injection attacks
@@ -34,8 +58,8 @@ public class InventoryController {
         }
 
         try {
-            var result = inventoryService.checkInventory(itemId);
-            var response = new InventoryResponse()
+            final var result = inventoryService.checkInventory(itemId);
+            final var response = new InventoryResponse()
                 .itemId((String) result.get("itemId"))
                 .name((String) result.get("name"))
                 .quantity((Integer) result.get("quantity"))
@@ -54,12 +78,18 @@ public class InventoryController {
         }
     }
 
+    /**
+     * Configures chaos latency injection settings.
+     *
+     * @param config the chaos latency configuration
+     * @return ResponseEntity with updated configuration or error details
+     */
     @PostMapping("/chaos/latency")
     public ResponseEntity<?> configureChaosLatency(@RequestBody ChaosLatencyRequest config) {
         try {
-            var enabled = config.getEnabled();
-            var min = config.getMin();
-            var max = config.getMax();
+            final var enabled = config.getEnabled();
+            final var min = config.getMin();
+            final var max = config.getMax();
 
             // Validate min
             if (min != null && (min < 0 || min > 10000)) {
@@ -72,14 +102,14 @@ public class InventoryController {
             }
 
             // Update config first to check min/max relationship
-            var result = inventoryService.configureChaosLatency(enabled, min, max);
+            final var result = inventoryService.configureChaosLatency(enabled, min, max);
 
             // Validate min <= max after update
             if (inventoryService.getChaosLatencyMin() > inventoryService.getChaosLatencyMax()) {
                 return ResponseEntity.badRequest().body(new ErrorResponse("Min latency cannot be greater than max latency"));
             }
 
-            var response = new ChaosLatencyResponse()
+            final var response = new ChaosLatencyResponse()
                 .enabled((Boolean) result.get("enabled"))
                 .min((Integer) result.get("min"))
                 .max((Integer) result.get("max"));
@@ -90,19 +120,25 @@ public class InventoryController {
         }
     }
 
+    /**
+     * Configures chaos error injection settings.
+     *
+     * @param config the chaos error configuration
+     * @return ResponseEntity with updated configuration or error details
+     */
     @PostMapping("/chaos/errors")
     public ResponseEntity<?> configureChaosErrors(@RequestBody ChaosErrorRequest config) {
         try {
-            var enabled = config.getEnabled();
-            var rate = config.getRate();
+            final var enabled = config.getEnabled();
+            final var rate = config.getRate();
 
             // Validate rate
             if (rate != null && (rate < 0.0 || rate > 1.0)) {
                 return ResponseEntity.badRequest().body(new ErrorResponse("Error rate must be between 0.0 and 1.0"));
             }
 
-            var result = inventoryService.configureChaosErrors(enabled, rate);
-            var response = new ChaosErrorResponse()
+            final var result = inventoryService.configureChaosErrors(enabled, rate);
+            final var response = new ChaosErrorResponse()
                 .enabled((Boolean) result.get("enabled"))
                 .rate((Double) result.get("rate"));
             return ResponseEntity.ok(response);
