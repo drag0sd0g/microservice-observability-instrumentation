@@ -41,8 +41,8 @@ public class OpenTelemetryConfig {
      * @param serviceName the name of this service for trace identification
      */
     public OpenTelemetryConfig(
-            @Value("${otel.exporter.otlp.endpoint}") String otlpEndpoint,
-            @Value("${spring.application.name}") String serviceName) {
+            @Value("${otel.exporter.otlp.endpoint}") final String otlpEndpoint,
+            @Value("${spring.application.name}") final String serviceName) {
         this.otlpEndpoint = otlpEndpoint;
         this.serviceName = serviceName;
     }
