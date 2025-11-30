@@ -14,8 +14,16 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-import static com.observability.order.util.LogUtils.sanitizeForLog;
+import static com.observability.commons.util.LogUtils.sanitizeForLog;
 
+/**
+ * Service class for order management operations.
+ * 
+ * <p>This service handles the business logic for order creation
+ * and retrieval, including metrics collection and distributed tracing.</p>
+ *
+ * @since 1.0.0
+ */
 @Service
 public class OrderService {
 
@@ -25,10 +33,17 @@ public class OrderService {
     private final Counter ordersCreatedCounter;
     private final Tracer tracer;
 
+    /**
+     * Constructs a new OrderService with the required dependencies.
+     *
+     * @param orderRepository the repository for order persistence
+     * @param meterRegistry the Micrometer registry for metrics
+     * @param tracer the OpenTelemetry tracer for distributed tracing (optional)
+     */
     public OrderService(
-            OrderRepository orderRepository,
-            MeterRegistry meterRegistry,
-            @Autowired(required = false) Tracer tracer) {
+            final OrderRepository orderRepository,
+            final MeterRegistry meterRegistry,
+            @Autowired(required = false) final Tracer tracer) {
         this.orderRepository = orderRepository;
         this.ordersCreatedCounter = Counter.builder("orders_created_total")
             .description("Total number of orders created")
@@ -36,7 +51,14 @@ public class OrderService {
         this.tracer = tracer;
     }
 
-    public Order createOrder(String itemId, Integer quantity) {
+    /**
+     * Creates a new order with the specified item and quantity.
+     *
+     * @param itemId the ID of the item to order
+     * @param quantity the quantity to order
+     * @return the created order with generated ID
+     */
+    public Order createOrder(final String itemId, final Integer quantity) {
         Span span = null;
         if (tracer != null) {
             span = tracer.spanBuilder("create-order").startSpan();
@@ -67,12 +89,23 @@ public class OrderService {
         }
     }
 
+    /**
+     * Retrieves all orders from the database.
+     *
+     * @return list of all orders
+     */
     public List<Order> getAllOrders() {
         logger.info("Fetching all orders");
         return orderRepository.findAll();
     }
 
-    public Optional<Order> getOrderById(String id) {
+    /**
+     * Retrieves a specific order by its ID.
+     *
+     * @param id the order ID to retrieve
+     * @return an Optional containing the order if found, empty otherwise
+     */
+    public Optional<Order> getOrderById(final String id) {
         logger.info("Fetching order: {}", sanitizeForLog(id));
         return orderRepository.findById(id);
     }

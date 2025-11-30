@@ -15,8 +15,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.observability.inventory.util.LogUtils.sanitizeForLog;
+import static com.observability.commons.util.LogUtils.sanitizeForLog;
 
+/**
+ * Service class for inventory management operations.
+ * 
+ * <p>This service handles inventory checks and provides chaos engineering
+ * capabilities for testing system resilience under adverse conditions.</p>
+ *
+ * @since 1.0.0
+ */
 @Service
 public class InventoryService {
 
@@ -32,14 +40,25 @@ public class InventoryService {
     private boolean chaosErrorEnabled;
     private double chaosErrorRate;
 
+    /**
+     * Constructs a new InventoryService with the required dependencies.
+     *
+     * @param inventoryRepository the repository for inventory persistence
+     * @param tracer the OpenTelemetry tracer for distributed tracing (optional)
+     * @param chaosLatencyEnabled whether chaos latency is enabled
+     * @param chaosLatencyMin minimum latency in milliseconds for chaos injection
+     * @param chaosLatencyMax maximum latency in milliseconds for chaos injection
+     * @param chaosErrorEnabled whether chaos errors are enabled
+     * @param chaosErrorRate the rate of chaos errors (0.0 to 1.0)
+     */
     public InventoryService(
-            InventoryRepository inventoryRepository,
-            @Autowired(required = false) Tracer tracer,
-            @Value("${chaos.latency.enabled:false}") boolean chaosLatencyEnabled,
-            @Value("${chaos.latency.min:100}") int chaosLatencyMin,
-            @Value("${chaos.latency.max:2000}") int chaosLatencyMax,
-            @Value("${chaos.error.enabled:false}") boolean chaosErrorEnabled,
-            @Value("${chaos.error.rate:0.1}") double chaosErrorRate) {
+            final InventoryRepository inventoryRepository,
+            @Autowired(required = false) final Tracer tracer,
+            @Value("${chaos.latency.enabled:false}") final boolean chaosLatencyEnabled,
+            @Value("${chaos.latency.min:100}") final int chaosLatencyMin,
+            @Value("${chaos.latency.max:2000}") final int chaosLatencyMax,
+            @Value("${chaos.error.enabled:false}") final boolean chaosErrorEnabled,
+            @Value("${chaos.error.rate:0.1}") final double chaosErrorRate) {
         this.inventoryRepository = inventoryRepository;
         this.tracer = tracer;
         this.chaosLatencyEnabled = chaosLatencyEnabled;
@@ -49,7 +68,15 @@ public class InventoryService {
         this.chaosErrorRate = chaosErrorRate;
     }
 
-    public Map<String, Object> checkInventory(String itemId) throws InterruptedException {
+    /**
+     * Checks inventory availability for a specific item.
+     *
+     * @param itemId the item ID to check
+     * @return map containing inventory information
+     * @throws InterruptedException if the thread is interrupted during latency injection
+     * @throws RuntimeException if chaos error is injected
+     */
+    public Map<String, Object> checkInventory(final String itemId) throws InterruptedException {
         Span span = null;
         if (tracer != null) {
             span = tracer.spanBuilder("check-inventory").startSpan();
@@ -61,7 +88,7 @@ public class InventoryService {
 
             // Chaos engineering: random latency
             if (chaosLatencyEnabled) {
-                var delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
+                final var delay = random.nextInt(chaosLatencyMax - chaosLatencyMin) + chaosLatencyMin;
                 if (span != null) {
                     span.setAttribute("chaos.latency_ms", delay);
                 }
@@ -80,7 +107,7 @@ public class InventoryService {
 
             logger.info("Checking inventory for item: {}", sanitizeForLog(itemId));
 
-            var itemOpt = inventoryRepository.findById(itemId);
+            final var itemOpt = inventoryRepository.findById(itemId);
 
             return buildResponse(itemId, itemOpt);
         } finally {
@@ -90,8 +117,8 @@ public class InventoryService {
         }
     }
 
-    private static HashMap<String, Object> buildResponse(String itemId, Optional<InventoryItem> itemOpt) {
-        var response = new HashMap<String, Object>();
+    private static HashMap<String, Object> buildResponse(final String itemId, final Optional<InventoryItem> itemOpt) {
+        final var response = new HashMap<String, Object>();
         if (itemOpt.isEmpty()) {
             // Return default inventory for demo purposes
             response.put("itemId", itemId);
@@ -99,7 +126,7 @@ public class InventoryService {
             response.put("quantity", 100);
             response.put("available", true);
         } else {
-            var item = itemOpt.get();
+            final var item = itemOpt.get();
             response.put("itemId", item.getItemId());
             response.put("name", item.getName());
             response.put("quantity", item.getQuantity());
@@ -108,7 +135,15 @@ public class InventoryService {
         return response;
     }
 
-    public Map<String, Object> configureChaosLatency(Boolean enabled, Integer min, Integer max) {
+    /**
+     * Configures chaos latency injection settings.
+     *
+     * @param enabled whether to enable latency injection
+     * @param min minimum latency in milliseconds
+     * @param max maximum latency in milliseconds
+     * @return map containing the updated configuration
+     */
+    public Map<String, Object> configureChaosLatency(final Boolean enabled, final Integer min, final Integer max) {
         logger.info("Configuring chaos latency");
 
         if (enabled != null) {
@@ -121,14 +156,21 @@ public class InventoryService {
             this.chaosLatencyMax = max;
         }
 
-        var response = new HashMap<String, Object>();
+        final var response = new HashMap<String, Object>();
         response.put("enabled", chaosLatencyEnabled);
         response.put("min", chaosLatencyMin);
         response.put("max", chaosLatencyMax);
         return response;
     }
 
-    public Map<String, Object> configureChaosErrors(Boolean enabled, Double rate) {
+    /**
+     * Configures chaos error injection settings.
+     *
+     * @param enabled whether to enable error injection
+     * @param rate the error rate (0.0 to 1.0)
+     * @return map containing the updated configuration
+     */
+    public Map<String, Object> configureChaosErrors(final Boolean enabled, final Double rate) {
         logger.info("Configuring chaos errors");
 
         if (enabled != null) {
@@ -138,17 +180,26 @@ public class InventoryService {
             this.chaosErrorRate = rate;
         }
 
-        var response = new HashMap<String, Object>();
+        final var response = new HashMap<String, Object>();
         response.put("enabled", chaosErrorEnabled);
         response.put("rate", chaosErrorRate);
         return response;
     }
 
-    // Getters for validation in controller
+    /**
+     * Gets the current minimum chaos latency setting.
+     *
+     * @return the minimum latency in milliseconds
+     */
     public int getChaosLatencyMin() {
         return chaosLatencyMin;
     }
 
+    /**
+     * Gets the current maximum chaos latency setting.
+     *
+     * @return the maximum latency in milliseconds
+     */
     public int getChaosLatencyMax() {
         return chaosLatencyMax;
     }

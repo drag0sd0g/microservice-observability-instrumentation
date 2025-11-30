@@ -12,12 +12,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
-import static com.observability.order.util.LogUtils.sanitizeForLog;
-
+/**
+ * REST controller for order management operations.
+ * 
+ * <p>This controller handles CRUD operations for orders, including
+ * order creation, retrieval, and listing.</p>
+ *
+ * @since 1.0.0
+ */
 @RestController
 @RequestMapping("/api")
 public class OrderController {
@@ -26,22 +31,38 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    public OrderController(OrderService orderService) {
+    /**
+     * Constructs a new OrderController with the required service.
+     *
+     * @param orderService the order service for handling business logic
+     */
+    public OrderController(final OrderService orderService) {
         this.orderService = orderService;
     }
 
+    /**
+     * Health check endpoint for service status monitoring.
+     *
+     * @return ResponseEntity with service status information
+     */
     @GetMapping("/health")
     public ResponseEntity<HealthResponse> health() {
         logger.info("Health check requested");
-        var response = new HealthResponse("UP", "order-service");
+        final var response = new HealthResponse("UP", "order-service");
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Creates a new order.
+     *
+     * @param orderRequest the order request containing itemId and quantity
+     * @return ResponseEntity with the created order or error details
+     */
     @PostMapping("/orders")
     public ResponseEntity<?> createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         try {
-            var itemId = orderRequest.getItemId();
-            var quantity = orderRequest.getQuantity();
+            final var itemId = orderRequest.getItemId();
+            final var quantity = orderRequest.getQuantity();
 
             if (itemId == null || quantity == null) {
                 logger.warn("Invalid order request received");
@@ -54,9 +75,9 @@ public class OrderController {
                 return ResponseEntity.badRequest().body(new ErrorResponse("Quantity must be between 1 and 10000"));
             }
 
-            var order = orderService.createOrder(itemId, quantity);
+            final var order = orderService.createOrder(itemId, quantity);
 
-            var response = new OrderResponse()
+            final var response = new OrderResponse()
                 .id(order.getId())
                 .itemId(order.getItemId())
                 .quantity(order.getQuantity())
@@ -70,10 +91,15 @@ public class OrderController {
         }
     }
 
+    /**
+     * Retrieves all orders.
+     *
+     * @return ResponseEntity with the list of all orders
+     */
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        var orders = orderService.getAllOrders();
-        var response = orders.stream()
+        final var orders = orderService.getAllOrders();
+        final var response = orders.stream()
             .map(order -> new OrderResponse()
                 .id(order.getId())
                 .itemId(order.getItemId())
@@ -84,6 +110,12 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves a specific order by its ID.
+     *
+     * @param id the order ID to retrieve
+     * @return ResponseEntity with the order or error details
+     */
     @GetMapping("/orders/{id}")
     public ResponseEntity<?> getOrder(@PathVariable String id) {
         // Validate input to prevent injection attacks
@@ -93,7 +125,7 @@ public class OrderController {
 
         return orderService.getOrderById(id)
             .map(order -> {
-                var response = new OrderResponse()
+                final var response = new OrderResponse()
                     .id(order.getId())
                     .itemId(order.getItemId())
                     .quantity(order.getQuantity())
